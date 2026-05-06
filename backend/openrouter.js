@@ -5,7 +5,7 @@ dotenv.config();
 
 const openai = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
-  apiKey: process.env.OPENROUTER_API_KEY,
+  apiKey: process.env.OPENROUTER_API_KEY || "placeholder_key",
   defaultHeaders: {
     "HTTP-Referer": "http://localhost:3001", // Optional, for including your app on openrouter.ai rankings.
     "X-Title": "UI-as-Code Platform", // Optional. Shows in rankings on openrouter.ai.
@@ -30,9 +30,9 @@ export const generateComponentCode = async (userPrompt, history = []) => {
     let code = completion.choices[0].message.content;
     
     // Clean up any potential markdown formatting the model might still include despite instructions
-    if (code.startsWith('\`\`\`')) {
-      const lines = code.split('\\n');
-      code = lines.slice(1, -1).join('\\n');
+    if (code.startsWith('```')) {
+      const lines = code.split('\n');
+      code = lines.slice(1, -1).join('\n');
     }
 
     return code;
