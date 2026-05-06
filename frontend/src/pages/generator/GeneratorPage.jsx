@@ -5,7 +5,7 @@ import { useGeneration } from '../../hooks/useGeneration';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 export default function GeneratorPage() {
-  const { code, messages, isGenerating, generate, reset } = useGeneration();
+  const { code, messages, isGenerating, generate, reset, repairFromError } = useGeneration();
   const [chatVisible, setChatVisible] = useState(true);
 
   return (
@@ -37,7 +37,11 @@ export default function GeneratorPage() {
           {chatVisible ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
         </button>
 
-        <LivePreview code={code} isGenerating={isGenerating} />
+        <LivePreview
+          code={code}
+          isGenerating={isGenerating}
+          onError={(errorMessage) => repairFromError(errorMessage, code)}
+        />
       </div>
     </div>
   );

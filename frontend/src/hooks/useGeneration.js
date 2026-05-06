@@ -21,16 +21,26 @@ export default function Preview() {
 }
 `;
 
+const MAX_AUTO_FIXES = 2;
+
+function buildFixPrompt(errorToFix, previousCode) {
+  return `The previous code generated this error:\n"${errorToFix}"\n\nHere is the broken code:\n${previousCode}\n\nFix the error and return the corrected code only.`;
+}
+
 export function useGeneration() {
   const [code, setCode] = useState(DEFAULT_CODE);
   const [history, setHistory] = useState([]); // [{role, content}]
   const [messages, setMessages] = useState([]); // [{role, text, code}] for UI
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState(null);
+  const [autoFixCount, setAutoFixCount] = useState(0);
+  const [lastAutoFixKey, setLastAutoFixKey] = useState('');
 
   const generate = useCallback(async (prompt, baasTemplate = null) => {
     setIsGenerating(true);
     setError(null);
+    setAutoFixCount(0);
+    setLastAutoFixKey('');
 
     // Optimistically add user message to UI
     const userMsg = { role: 'user', text: prompt };
@@ -69,6 +79,48 @@ export function useGeneration() {
     }
   }, [history]);
 
+  const repairFromError = useCallback(async (errorMessage, previousCode) => {
+    if (!errorMessage || !previousCode || isGenerating) return;
+    if (autoFixCount >= MAX_AUTO_FIXES) return;
+
+    const autoFixKey = `${errorMessage}::${previousCode.length}`;
+    if (autoFixKey === lastAutoFixKey) return;
+
+    setIsGenerating(true);
+    setError(null);
+    setLastAutoFixKey(autoFixKey);
+
+    try {
+      const fixPrompt = buildFixPrompt(errorMessage, previousCode);
+
+      const response = await fetch(`${API_URL}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: fixPrompt, history }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Auto-fix failed.');
+      }
+
+      const { code: newCode } = await response.json();
+      setCode(newCode);
+
+      const newHistory = [
+        ...history,
+        { role: 'user', content: fixPrompt },
+        { role: 'assistant', content: newCode },
+      ];
+      setHistory(newHistory);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setAutoFixCount(prev => prev + 1);
+      setIsGenerating(false);
+    }
+  }, [autoFixCount, history, isGenerating, lastAutoFixKey]);
+
   const reset = useCallback(() => {
     setCode(DEFAULT_CODE);
     setHistory([]);
@@ -76,5 +128,5 @@ export function useGeneration() {
     setError(null);
   }, []);
 
-  return { code, messages, isGenerating, error, generate, reset };
+  return { code, messages, isGenerating, error, generate, reset, repairFromError };
 }

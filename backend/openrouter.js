@@ -12,6 +12,20 @@ const openai = new OpenAI({
   }
 });
 
+function extractCode(aiResponse) {
+  if (!aiResponse || typeof aiResponse !== 'string') return '';
+
+  const codeBlockRegex = /```(?:jsx|javascript|js)?\n([\s\S]*?)```/i;
+  const match = aiResponse.match(codeBlockRegex);
+
+  if (match && match[1]) {
+    return match[1].trim();
+  }
+
+  // Fallback: remove common conversational prefixes if the model skipped code fences
+  return aiResponse.replace(/^(Sure|Here is|Certainly|Okay|Alright)[^\n]*\n/i, '').trim();
+}
+
 export const generateComponentCode = async (userPrompt, history = []) => {
   try {
     const messages = [
@@ -27,15 +41,8 @@ export const generateComponentCode = async (userPrompt, history = []) => {
       temperature: 0.2, // Lower temperature for more deterministic code generation
     });
 
-    let code = completion.choices[0].message.content;
-    
-    // Clean up any potential markdown formatting the model might still include despite instructions
-    if (code.startsWith('```')) {
-      const lines = code.split('\n');
-      code = lines.slice(1, -1).join('\n');
-    }
-
-    return code;
+    const raw = completion.choices[0].message.content;
+    return extractCode(raw);
   } catch (error) {
     console.error("Error generating code with OpenRouter:", error);
     throw new Error("Failed to generate UI code.");

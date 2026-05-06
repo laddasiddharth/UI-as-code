@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   SandpackProvider,
   SandpackLayout,
@@ -9,6 +9,36 @@ import {
 import { atomDark } from '@codesandbox/sandpack-themes';
 import { Eye, Code2, Loader2, AlertTriangle } from 'lucide-react';
 import ExportButton from './ExportButton';
+
+class PreviewErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, errorMessage: '' };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, errorMessage: error.message };
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
+      this.setState({ hasError: false, errorMessage: '' });
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-4 bg-red-100 text-red-700 font-mono text-xs">
+          <p>Compiler Error:</p>
+          <pre>{this.state.errorMessage}</pre>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 // Inner component to read sandpack error state
 function ErrorOverlay() {
@@ -28,7 +58,20 @@ function ErrorOverlay() {
   );
 }
 
-export default function LivePreview({ code, isGenerating }) {
+function ErrorReporter({ onError, isGenerating }) {
+  const { sandpack } = useSandpack();
+
+  useEffect(() => {
+    if (!onError || isGenerating) return;
+    if (sandpack.error?.message) {
+      onError(sandpack.error.message);
+    }
+  }, [onError, isGenerating, sandpack.error]);
+
+  return null;
+}
+
+export default function LivePreview({ code, isGenerating, onError }) {
   const [activeTab, setActiveTab] = useState('preview');
 
   // Defensively strip out hallucinated styling libraries and inject 'Self-Healing' mocks
@@ -157,14 +200,17 @@ const Icon = (props) => <div {...props} />;
             ],
           }}
         >
+          <ErrorReporter onError={onError} isGenerating={isGenerating} />
           <SandpackLayout style={{ height: '100%', border: 'none', borderRadius: 0 }}>
             {activeTab === 'preview' ? (
               <div className="relative w-full h-full">
-                <SandpackPreview
-                  style={{ height: '100%' }}
-                  showNavigator={false}
-                  showRefreshButton={true}
-                />
+                <PreviewErrorBoundary resetKey={code}>
+                  <SandpackPreview
+                    style={{ height: '100%' }}
+                    showNavigator={false}
+                    showRefreshButton={true}
+                  />
+                </PreviewErrorBoundary>
                 <ErrorOverlay />
               </div>
             ) : (
