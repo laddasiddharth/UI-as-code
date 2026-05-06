@@ -24,6 +24,14 @@ Additional rules:
 - Do not assume any libraries are installed except 'react' and 'lucide-react'. If you need a card, build it using a div with a border and shadow. If you need a button, use a <button> tag.
 `;
 
+export function getIterationPrompt(userPrompt, existingCode) {
+  if (!existingCode) {
+    return `Build a React/Tailwind component for the following request: "${userPrompt}".\nReturn ONLY valid JSX code inside a markdown block.`;
+  }
+
+  return `You are an expert React developer updating an existing component.\n\nHERE IS THE CURRENT COMPONENT CODE:\n\`\`\`jsx\n${existingCode}\n\`\`\`\n\nTHE USER REQUESTED THE FOLLOWING CHANGE:\n"${userPrompt}"\n\nINSTRUCTIONS:\n1. Apply the requested changes to the current component code.\n2. Do not remove existing features unless explicitly asked to.\n3. Output the ENTIRE updated component code from start to finish.\n4. Return ONLY valid JSX code inside a markdown block. NO conversational text.`;
+}
+
 /**
  * BaaS-specific prompt suffixes injected into user prompts
  * when the user selects a backend integration template.

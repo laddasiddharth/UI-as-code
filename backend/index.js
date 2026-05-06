@@ -19,7 +19,7 @@ app.get('/health', (req, res) => {
 
 // Endpoint to generate React component code
 app.post('/api/generate', async (req, res) => {
-  const { prompt, history, baasTemplate } = req.body;
+  const { prompt, history, baasTemplate, existingCode } = req.body;
 
   if (!prompt) {
     return res.status(400).json({ error: 'Prompt is required' });
@@ -32,7 +32,7 @@ app.post('/api/generate', async (req, res) => {
   const fullPrompt = templateSuffix ? `${prompt}\n\n${templateSuffix}` : prompt;
 
   try {
-    const code = await generateComponentCode(fullPrompt, history || []);
+    const code = await generateComponentCode(fullPrompt, history || [], existingCode || '');
     res.status(200).json({ code });
   } catch (error) {
     console.error('Generation Endpoint Error:', error);

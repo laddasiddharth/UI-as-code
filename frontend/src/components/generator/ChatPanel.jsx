@@ -42,9 +42,16 @@ function MessageBubble({ message }) {
   );
 }
 
-export default function ChatPanel({ messages, isGenerating, onGenerate, onReset }) {
+export default function ChatPanel({
+  messages,
+  isGenerating,
+  onGenerate,
+  onReset,
+  showInput = true,
+  baasTemplate = '',
+  onBaasChange = () => {},
+}) {
   const [input, setInput] = useState('');
-  const [baasTemplate, setBaasTemplate] = useState('');
   const [showBaas, setShowBaas] = useState(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -148,66 +155,66 @@ export default function ChatPanel({ messages, isGenerating, onGenerate, onReset 
         )}
       </div>
 
-      {/* Input */}
-      <div className="p-3 bg-white border-t border-gray-100 flex-shrink-0">
-        {/* BaaS Selector */}
-        <div className="mb-2">
-          <button
-            onClick={() => setShowBaas(!showBaas)}
-            className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-all ${
-              baasTemplate
-                ? 'bg-blue-50 text-blue-700 border-blue-200'
-                : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <Database className="w-3 h-3" />
-            {baasTemplate ? BAAS_OPTIONS.find(o => o.value === baasTemplate)?.label : 'Add backend integration'}
-            <ChevronDown className={`w-3 h-3 ml-auto transition-transform ${showBaas ? 'rotate-180' : ''}`} />
-          </button>
-          {showBaas && (
-            <div className="mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-              {BAAS_OPTIONS.map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => { setBaasTemplate(opt.value); setShowBaas(false); }}
-                  className={`w-full text-left px-3 py-2 text-xs transition-colors ${
-                    baasTemplate === opt.value
-                      ? 'bg-blue-50 text-blue-700 font-medium'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex items-end gap-2">
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Describe a UI component..."
-            rows={2}
-            className="flex-1 resize-none text-sm px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all placeholder-gray-400 bg-gray-50 focus:bg-white"
-            disabled={isGenerating}
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isGenerating}
-            className="flex-shrink-0 w-9 h-9 flex items-center justify-center bg-gray-900 hover:bg-gray-700 text-white rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-          >
-            {isGenerating ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
+      {showInput && (
+        <div className="p-3 bg-white border-t border-gray-100 flex-shrink-0">
+          <div className="mb-2">
+            <button
+              onClick={() => setShowBaas(!showBaas)}
+              className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-all ${
+                baasTemplate
+                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                  : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <Database className="w-3 h-3" />
+              {baasTemplate ? BAAS_OPTIONS.find(o => o.value === baasTemplate)?.label : 'Add backend integration'}
+              <ChevronDown className={`w-3 h-3 ml-auto transition-transform ${showBaas ? 'rotate-180' : ''}`} />
+            </button>
+            {showBaas && (
+              <div className="mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                {BAAS_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => { onBaasChange(opt.value); setShowBaas(false); }}
+                    className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                      baasTemplate === opt.value
+                        ? 'bg-blue-50 text-blue-700 font-medium'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             )}
-          </button>
-        </form>
-        <p className="text-center text-xs text-gray-400 mt-2">Shift+Enter for new line · Enter to send</p>
-      </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex items-end gap-2">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Describe a UI component..."
+              rows={2}
+              className="flex-1 resize-none text-sm px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all placeholder-gray-400 bg-gray-50 focus:bg-white"
+              disabled={isGenerating}
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || isGenerating}
+              className="flex-shrink-0 w-9 h-9 flex items-center justify-center bg-gray-900 hover:bg-gray-700 text-white rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              {isGenerating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </button>
+          </form>
+          <p className="text-center text-xs text-gray-400 mt-2">Shift+Enter for new line · Enter to send</p>
+        </div>
+      )}
     </div>
   );
 }

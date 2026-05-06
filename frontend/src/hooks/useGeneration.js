@@ -42,6 +42,8 @@ export function useGeneration() {
     setAutoFixCount(0);
     setLastAutoFixKey('');
 
+    const existingCode = code === DEFAULT_CODE ? '' : code;
+
     // Optimistically add user message to UI
     const userMsg = { role: 'user', text: prompt };
     setMessages(prev => [...prev, userMsg]);
@@ -50,7 +52,7 @@ export function useGeneration() {
       const response = await fetch(`${API_URL}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, history, baasTemplate }),
+        body: JSON.stringify({ prompt, history, baasTemplate, existingCode }),
       });
 
       if (!response.ok) {
@@ -77,7 +79,7 @@ export function useGeneration() {
     } finally {
       setIsGenerating(false);
     }
-  }, [history]);
+  }, [code, history]);
 
   const repairFromError = useCallback(async (errorMessage, previousCode) => {
     if (!errorMessage || !previousCode || isGenerating) return;
@@ -96,7 +98,7 @@ export function useGeneration() {
       const response = await fetch(`${API_URL}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: fixPrompt, history }),
+        body: JSON.stringify({ prompt: fixPrompt, history, existingCode: previousCode }),
       });
 
       if (!response.ok) {

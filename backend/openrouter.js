@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { SYSTEM_PROMPT } from './prompts.js';
+import { SYSTEM_PROMPT, getIterationPrompt } from './prompts.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -26,12 +26,13 @@ function extractCode(aiResponse) {
   return aiResponse.replace(/^(Sure|Here is|Certainly|Okay|Alright)[^\n]*\n/i, '').trim();
 }
 
-export const generateComponentCode = async (userPrompt, history = []) => {
+export const generateComponentCode = async (userPrompt, history = [], existingCode = '') => {
   try {
+    const finalPrompt = getIterationPrompt(userPrompt, existingCode);
     const messages = [
       { role: "system", content: SYSTEM_PROMPT },
       ...history,
-      { role: "user", content: userPrompt }
+      { role: "user", content: finalPrompt }
     ];
 
     const completion = await openai.chat.completions.create({
