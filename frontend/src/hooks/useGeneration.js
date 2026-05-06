@@ -28,7 +28,7 @@ export function useGeneration() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState(null);
 
-  const generate = useCallback(async (prompt) => {
+  const generate = useCallback(async (prompt, baasTemplate = null) => {
     setIsGenerating(true);
     setError(null);
 
@@ -40,7 +40,7 @@ export function useGeneration() {
       const response = await fetch(`${API_URL}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, history }),
+        body: JSON.stringify({ prompt, history, baasTemplate }),
       });
 
       if (!response.ok) {

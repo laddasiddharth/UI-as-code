@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, RotateCcw, Sparkles, User, Bot, AlertCircle, Copy, Check } from 'lucide-react';
+import { Send, Loader2, RotateCcw, Sparkles, User, Bot, Copy, Check, Database, ChevronDown } from 'lucide-react';
 
 function MessageBubble({ message }) {
   const [copied, setCopied] = useState(false);
@@ -44,6 +44,8 @@ function MessageBubble({ message }) {
 
 export default function ChatPanel({ messages, isGenerating, onGenerate, onReset }) {
   const [input, setInput] = useState('');
+  const [baasTemplate, setBaasTemplate] = useState('');
+  const [showBaas, setShowBaas] = useState(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -54,7 +56,7 @@ export default function ChatPanel({ messages, isGenerating, onGenerate, onReset 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!input.trim() || isGenerating) return;
-    onGenerate(input.trim());
+    onGenerate(input.trim(), baasTemplate || null);
     setInput('');
   };
 
@@ -70,6 +72,13 @@ export default function ChatPanel({ messages, isGenerating, onGenerate, onReset 
     "A dark hero section with a CTA button",
     "A responsive navigation bar",
     "A stats dashboard with charts",
+  ];
+
+  const BAAS_OPTIONS = [
+    { value: '', label: 'No backend integration' },
+    { value: 'supabase_auth', label: '🔐 Supabase Auth' },
+    { value: 'supabase_data', label: '🗄️ Supabase Data Fetching' },
+    { value: 'firebase_auth', label: '🔥 Firebase Auth' },
   ];
 
   return (
@@ -141,6 +150,39 @@ export default function ChatPanel({ messages, isGenerating, onGenerate, onReset 
 
       {/* Input */}
       <div className="p-3 bg-white border-t border-gray-100 flex-shrink-0">
+        {/* BaaS Selector */}
+        <div className="mb-2">
+          <button
+            onClick={() => setShowBaas(!showBaas)}
+            className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-all ${
+              baasTemplate
+                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <Database className="w-3 h-3" />
+            {baasTemplate ? BAAS_OPTIONS.find(o => o.value === baasTemplate)?.label : 'Add backend integration'}
+            <ChevronDown className={`w-3 h-3 ml-auto transition-transform ${showBaas ? 'rotate-180' : ''}`} />
+          </button>
+          {showBaas && (
+            <div className="mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+              {BAAS_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => { setBaasTemplate(opt.value); setShowBaas(false); }}
+                  className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                    baasTemplate === opt.value
+                      ? 'bg-blue-50 text-blue-700 font-medium'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <form onSubmit={handleSubmit} className="flex items-end gap-2">
           <textarea
             ref={textareaRef}

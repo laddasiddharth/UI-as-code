@@ -8,6 +8,7 @@ import {
 } from '@codesandbox/sandpack-react';
 import { atomDark } from '@codesandbox/sandpack-themes';
 import { Eye, Code2, Loader2, AlertTriangle } from 'lucide-react';
+import ExportButton from './ExportButton';
 
 // Inner component to read sandpack error state
 function ErrorOverlay() {
@@ -76,6 +77,7 @@ export default function LivePreview({ code, isGenerating }) {
               <span>Generating...</span>
             </div>
           )}
+          <ExportButton code={code} disabled={isGenerating} />
           <div className="flex gap-1.5 ml-2">
             <span className="w-2.5 h-2.5 rounded-full bg-red-500/80"></span>
             <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></span>
