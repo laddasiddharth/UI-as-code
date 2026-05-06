@@ -18,56 +18,62 @@ const ProtectedRoute = ({ children }) => {
 function DashboardContent() {
   const navigate = useNavigate();
   return (
-    <div className="space-y-6">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Dashboard</h1>
-        <p className="text-gray-500 mt-2">Welcome back to your UI-as-Code workspace.</p>
+    <div className="space-y-8">
+      <header className="mb-10">
+        <p className="text-xs uppercase tracking-[0.3em] text-[color:var(--muted)]">Workbench</p>
+        <h1 className="font-display text-4xl sm:text-5xl text-[color:var(--ink)] mt-3">Dashboard Atelier</h1>
+        <p className="text-[color:var(--muted)] mt-3 max-w-2xl">
+          Curate, refine, and ship interfaces that feel designed, not generated.
+        </p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <div
           onClick={() => navigate('/generate')}
-          className="bg-white p-6 rounded-2xl border border-purple-100 shadow-sm hover:shadow-md hover:border-purple-200 transition-all cursor-pointer group"
+          className="ink-card p-6 rounded-3xl transition-all cursor-pointer group hover:-translate-y-1"
         >
-          <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-            <PlusCircle className="w-6 h-6 text-purple-600" />
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 bg-[color:var(--accent)]/10 text-[color:var(--accent)] group-hover:scale-110 transition-transform">
+            <PlusCircle className="w-6 h-6" />
           </div>
-          <h3 className="font-semibold text-gray-900">New Generation</h3>
-          <p className="text-sm text-gray-500 mt-1">Describe a UI and watch it build</p>
+          <h3 className="font-display text-xl text-[color:var(--ink)]">New Generation</h3>
+          <p className="text-sm text-[color:var(--muted)] mt-2">Describe a UI and watch it build</p>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
-          <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-            <Layout className="w-6 h-6 text-blue-600" />
+        <div className="ink-card p-6 rounded-3xl transition-all cursor-pointer group hover:-translate-y-1">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 bg-[color:var(--accent-2)]/15 text-[color:var(--accent-2)] group-hover:scale-110 transition-transform">
+            <Layout className="w-6 h-6" />
           </div>
-          <h3 className="font-semibold text-gray-900">Templates</h3>
-          <p className="text-sm text-gray-500 mt-1">Use a pre-built foundation</p>
+          <h3 className="font-display text-xl text-[color:var(--ink)]">Templates</h3>
+          <p className="text-sm text-[color:var(--muted)] mt-2">Use a pre-built foundation</p>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
-          <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-            <Code className="w-6 h-6 text-green-600" />
+        <div className="ink-card p-6 rounded-3xl transition-all cursor-pointer group hover:-translate-y-1">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 bg-[color:var(--accent-3)]/25 text-[color:var(--ink)] group-hover:scale-110 transition-transform">
+            <Code className="w-6 h-6" />
           </div>
-          <h3 className="font-semibold text-gray-900">Components</h3>
-          <p className="text-sm text-gray-500 mt-1">Browse your component library</p>
+          <h3 className="font-display text-xl text-[color:var(--ink)]">Components</h3>
+          <p className="text-sm text-[color:var(--muted)] mt-2">Browse your component library</p>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
-          <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-            <TerminalSquare className="w-6 h-6 text-orange-600" />
+        <div className="ink-card p-6 rounded-3xl transition-all cursor-pointer group hover:-translate-y-1">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 bg-[color:var(--accent)]/15 text-[color:var(--accent)] group-hover:scale-110 transition-transform">
+            <TerminalSquare className="w-6 h-6" />
           </div>
-          <h3 className="font-semibold text-gray-900">API Keys</h3>
-          <p className="text-sm text-gray-500 mt-1">Manage external connections</p>
+          <h3 className="font-display text-xl text-[color:var(--ink)]">API Keys</h3>
+          <p className="text-sm text-[color:var(--muted)] mt-2">Manage external connections</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">Recent Projects</h2>
+      <div className="ink-card rounded-3xl overflow-hidden">
+        <div className="px-6 py-5 border-b border-[color:var(--border)] bg-[color:var(--panel)]">
+          <h2 className="font-display text-xl text-[color:var(--ink)]">Recent Projects</h2>
         </div>
-        <div className="p-6 text-center text-gray-500 py-12">
+        <div className="p-6 text-center text-[color:var(--muted)] py-12">
           No projects found.{' '}
-          <button onClick={() => navigate('/generate')} className="text-purple-600 hover:underline font-medium">
+          <button
+            onClick={() => navigate('/generate')}
+            className="text-[color:var(--accent)] hover:underline font-medium"
+          >
             Create one to get started!
           </button>
         </div>

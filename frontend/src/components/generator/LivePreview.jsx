@@ -114,9 +114,33 @@ const Icon = (props) => <div {...props} />;
   })();
 
   const files = {
+    '/index.js': {
+      code: `import React from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App';
+import './styles.css';
+
+const root = createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <div className="min-h-screen w-full flex flex-col bg-white">
+      <App />
+    </div>
+  </React.StrictMode>
+);`,
+      hidden: true,
+    },
     '/App.js': {
       code: sanitizedCode,
       active: true,
+    },
+    '/styles.css': {
+      code: `html, body { height: 100%; margin: 0; }
+body { display: flex; background: #ffffff; }
+#root { flex: 1; height: 100%; min-height: 100vh; display: flex; flex-direction: column; }
+#root > * { flex: 1; min-height: 100%; width: 100%; display: flex; flex-direction: column; }
+`,
+      hidden: true,
     },
     '/tailwind.config.js': {
       code: `module.exports = { content: ['./**/*.{js,jsx}'], theme: { extend: {} }, plugins: [] }`,
@@ -125,16 +149,16 @@ const Icon = (props) => <div {...props} />;
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#1e1e2e] overflow-hidden">
+    <div className="flex flex-col h-full bg-[color:var(--panel-strong)] overflow-hidden">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-[#1a1a2e] border-b border-white/10 flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-2 bg-[color:var(--panel-strong)] border-b border-[color:var(--border)] flex-shrink-0">
         <div className="flex gap-1">
           <button
             onClick={() => setActiveTab('preview')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
               activeTab === 'preview'
-                ? 'bg-white/10 text-white'
-                : 'text-white/50 hover:text-white/80'
+                ? 'bg-[color:var(--accent)]/15 text-[color:var(--ink)]'
+                : 'text-[color:var(--muted)] hover:text-[color:var(--ink)]'
             }`}
           >
             <Eye className="w-3.5 h-3.5" />
@@ -144,8 +168,8 @@ const Icon = (props) => <div {...props} />;
             onClick={() => setActiveTab('code')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
               activeTab === 'code'
-                ? 'bg-white/10 text-white'
-                : 'text-white/50 hover:text-white/80'
+                ? 'bg-[color:var(--accent)]/15 text-[color:var(--ink)]'
+                : 'text-[color:var(--muted)] hover:text-[color:var(--ink)]'
             }`}
           >
             <Code2 className="w-3.5 h-3.5" />
@@ -154,7 +178,7 @@ const Icon = (props) => <div {...props} />;
         </div>
         <div className="flex items-center gap-2">
           {isGenerating && (
-            <div className="flex items-center gap-1.5 text-xs text-purple-400">
+            <div className="flex items-center gap-1.5 text-xs text-[color:var(--accent)]">
               <Loader2 className="w-3 h-3 animate-spin" />
               <span>Generating...</span>
             </div>
@@ -172,13 +196,13 @@ const Icon = (props) => <div {...props} />;
       <div className="flex-1 relative overflow-hidden">
         {/* Generating overlay */}
         {isGenerating && (
-          <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-sm flex items-center justify-center">
-            <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl p-6 text-center shadow-2xl">
-              <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
+          <div className="absolute inset-0 z-20 bg-[color:var(--panel-strong)]/80 backdrop-blur-sm flex items-center justify-center">
+            <div className="bg-[color:var(--panel-strong)] border border-[color:var(--border)] rounded-2xl p-6 text-center shadow-2xl">
+              <div className="w-12 h-12 bg-[color:var(--accent)]/15 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Loader2 className="w-6 h-6 text-[color:var(--accent)] animate-spin" />
               </div>
-              <p className="text-white/90 text-sm font-medium">Building your component...</p>
-              <p className="text-white/40 text-xs mt-1">Powered by Qwen3 Coder 480B</p>
+              <p className="text-[color:var(--ink)] text-sm font-medium">Building your component...</p>
+              <p className="text-[color:var(--muted)] text-xs mt-1">Powered by Qwen3 Coder 480B</p>
             </div>
           </div>
         )}
@@ -193,6 +217,7 @@ const Icon = (props) => <div {...props} />;
               'lucide-react': 'latest',
               'tailwindcss': 'latest',
             },
+            entry: '/index.js',
           }}
           options={{
             externalResources: [
@@ -201,12 +226,22 @@ const Icon = (props) => <div {...props} />;
           }}
         >
           <ErrorReporter onError={onError} isGenerating={isGenerating} />
-          <SandpackLayout style={{ height: '100%', border: 'none', borderRadius: 0 }}>
+          <SandpackLayout
+            style={{
+              height: '100%',
+              border: 'none',
+              borderRadius: 0,
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: 0,
+            }}
+          >
             {activeTab === 'preview' ? (
-              <div className="relative w-full h-full">
+              <div className="relative w-full h-full overflow-auto bg-[color:var(--panel-strong)]">
                 <PreviewErrorBoundary resetKey={code}>
                   <SandpackPreview
-                    style={{ height: '100%' }}
+                    style={{ height: '100%', overflow: 'auto', background: 'var(--panel-strong)' }}
                     showNavigator={false}
                     showRefreshButton={true}
                   />
@@ -214,14 +249,16 @@ const Icon = (props) => <div {...props} />;
                 <ErrorOverlay />
               </div>
             ) : (
-              <SandpackCodeEditor
-                style={{ height: '100%' }}
-                showTabs={false}
-                showLineNumbers={true}
-                showInlineErrors={true}
-                wrapContent={false}
-                readOnly={false}
-              />
+              <div className="w-full flex-1 min-h-0 overflow-auto">
+                <SandpackCodeEditor
+                  style={{ height: '100%', minHeight: 0, overflow: 'auto' }}
+                  showTabs={false}
+                  showLineNumbers={true}
+                  showInlineErrors={true}
+                  wrapContent={false}
+                  readOnly={false}
+                />
+              </div>
             )}
           </SandpackLayout>
         </SandpackProvider>

@@ -14,24 +14,24 @@ function MessageBubble({ message }) {
   return (
     <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
       <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-        isUser ? 'bg-gray-900 text-white' : 'bg-gradient-to-tr from-purple-600 to-blue-500 text-white'
+        isUser ? 'bg-[color:var(--ink)] text-[color:var(--panel-strong)]' : 'bg-[color:var(--accent)]/15 text-[color:var(--accent)]'
       }`}>
         {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
       </div>
       <div className={`max-w-[85%] space-y-2 ${isUser ? 'items-end' : 'items-start'} flex flex-col`}>
         <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
           message.isError
-            ? 'bg-red-50 text-red-600 border border-red-100'
+            ? 'bg-[color:var(--accent)]/10 text-[color:var(--accent)] border border-[color:var(--accent)]/30'
             : isUser
-              ? 'bg-gray-900 text-white rounded-tr-sm'
-              : 'bg-white border border-gray-100 text-gray-700 rounded-tl-sm shadow-sm'
+              ? 'bg-[color:var(--ink)] text-[color:var(--panel-strong)] rounded-tr-sm'
+              : 'bg-[color:var(--panel)] border border-[color:var(--border)] text-[color:var(--ink)] rounded-tl-sm shadow-sm'
         }`}>
           {message.text}
         </div>
         {message.code && !isUser && (
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            className="flex items-center gap-1.5 text-xs text-[color:var(--muted)] hover:text-[color:var(--ink)] transition-colors"
           >
             {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
             {copied ? 'Copied!' : 'Copy code'}
@@ -89,19 +89,19 @@ export default function ChatPanel({
   ];
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col h-full bg-[color:var(--panel-strong)]">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--panel-strong)] border-b border-[color:var(--border)] flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="bg-gradient-to-tr from-purple-600 to-blue-500 p-1 rounded-md">
-            <Sparkles className="w-3.5 h-3.5 text-white" />
+          <div className="bg-[color:var(--accent)]/15 p-1 rounded-md">
+            <Sparkles className="w-3.5 h-3.5 text-[color:var(--accent)]" />
           </div>
-          <span className="text-sm font-semibold text-gray-900">AI Generator</span>
+          <span className="text-sm font-semibold text-[color:var(--ink)]">AI Generator</span>
         </div>
         {messages.length > 0 && (
           <button
             onClick={onReset}
-            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-700 transition-colors p-1.5 hover:bg-gray-100 rounded-md"
+            className="flex items-center gap-1.5 text-xs text-[color:var(--muted)] hover:text-[color:var(--ink)] transition-colors p-1.5 hover:bg-[color:var(--panel)] rounded-md"
             title="New session"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -115,11 +115,11 @@ export default function ChatPanel({
         {messages.length === 0 ? (
           <div className="space-y-4">
             <div className="text-center py-6">
-              <div className="w-12 h-12 bg-gradient-to-tr from-purple-600 to-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-purple-500/30">
-                <Sparkles className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 bg-[color:var(--accent-3)] rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+                <Sparkles className="w-6 h-6 text-[color:var(--ink)]" />
               </div>
-              <h3 className="text-sm font-semibold text-gray-800 mb-1">Describe your UI</h3>
-              <p className="text-xs text-gray-500">Powered by Qwen3 Coder 480B</p>
+              <h3 className="text-sm font-semibold text-[color:var(--ink)] mb-1">Describe your UI</h3>
+              <p className="text-xs text-[color:var(--muted)]">Powered by Qwen3 Coder 480B</p>
             </div>
             <div className="grid grid-cols-1 gap-2">
               {suggestions.map((s, i) => (
@@ -127,7 +127,7 @@ export default function ChatPanel({
                   key={i}
                   onClick={() => onGenerate(s)}
                   disabled={isGenerating}
-                  className="text-left px-3 py-2.5 text-xs text-gray-600 bg-white hover:bg-purple-50 hover:text-purple-700 border border-gray-200 hover:border-purple-200 rounded-xl transition-all"
+                  className="text-left px-3 py-2.5 text-xs text-[color:var(--muted)] bg-[color:var(--panel)] hover:bg-[color:var(--accent)]/10 hover:text-[color:var(--ink)] border border-[color:var(--border)] rounded-xl transition-all"
                 >
                   {s}
                 </button>
@@ -141,12 +141,12 @@ export default function ChatPanel({
             ))}
             {isGenerating && (
               <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-tr from-purple-600 to-blue-500">
-                  <Bot className="w-4 h-4 text-white" />
+                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[color:var(--accent)]/15">
+                  <Bot className="w-4 h-4 text-[color:var(--accent)]" />
                 </div>
-                <div className="bg-white border border-gray-100 shadow-sm px-4 py-2.5 rounded-2xl rounded-tl-sm flex items-center gap-2">
-                  <Loader2 className="w-3.5 h-3.5 text-purple-500 animate-spin" />
-                  <span className="text-xs text-gray-500">Generating component...</span>
+                <div className="bg-[color:var(--panel)] border border-[color:var(--border)] shadow-sm px-4 py-2.5 rounded-2xl rounded-tl-sm flex items-center gap-2">
+                  <Loader2 className="w-3.5 h-3.5 text-[color:var(--accent)] animate-spin" />
+                  <span className="text-xs text-[color:var(--muted)]">Generating component...</span>
                 </div>
               </div>
             )}
@@ -156,14 +156,14 @@ export default function ChatPanel({
       </div>
 
       {showInput && (
-        <div className="p-3 bg-white border-t border-gray-100 flex-shrink-0">
+        <div className="p-3 bg-[color:var(--panel-strong)] border-t border-[color:var(--border)] flex-shrink-0">
           <div className="mb-2">
             <button
               onClick={() => setShowBaas(!showBaas)}
               className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-all ${
                 baasTemplate
-                  ? 'bg-blue-50 text-blue-700 border-blue-200'
-                  : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300'
+                  ? 'bg-[color:var(--accent-2)]/15 text-[color:var(--accent-2)] border-[color:var(--accent-2)]/30'
+                  : 'bg-[color:var(--panel)] text-[color:var(--muted)] border-[color:var(--border)] hover:border-[color:var(--accent-2)]/40'
               }`}
             >
               <Database className="w-3 h-3" />
@@ -171,15 +171,15 @@ export default function ChatPanel({
               <ChevronDown className={`w-3 h-3 ml-auto transition-transform ${showBaas ? 'rotate-180' : ''}`} />
             </button>
             {showBaas && (
-              <div className="mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+              <div className="mt-1 bg-[color:var(--panel-strong)] border border-[color:var(--border)] rounded-xl shadow-lg overflow-hidden">
                 {BAAS_OPTIONS.map(opt => (
                   <button
                     key={opt.value}
                     onClick={() => { onBaasChange(opt.value); setShowBaas(false); }}
                     className={`w-full text-left px-3 py-2 text-xs transition-colors ${
                       baasTemplate === opt.value
-                        ? 'bg-blue-50 text-blue-700 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50'
+                        ? 'bg-[color:var(--accent-2)]/15 text-[color:var(--accent-2)] font-medium'
+                        : 'text-[color:var(--muted)] hover:bg-[color:var(--panel)]'
                     }`}
                   >
                     {opt.label}
@@ -197,13 +197,13 @@ export default function ChatPanel({
               onKeyDown={handleKeyDown}
               placeholder="Describe a UI component..."
               rows={2}
-              className="flex-1 resize-none text-sm px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all placeholder-gray-400 bg-gray-50 focus:bg-white"
+              className="flex-1 resize-none text-sm px-3 py-2.5 border border-[color:var(--border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)] focus:border-transparent transition-all placeholder-[color:var(--muted)] bg-[color:var(--panel)]"
               disabled={isGenerating}
             />
             <button
               type="submit"
               disabled={!input.trim() || isGenerating}
-              className="flex-shrink-0 w-9 h-9 flex items-center justify-center bg-gray-900 hover:bg-gray-700 text-white rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="flex-shrink-0 w-9 h-9 flex items-center justify-center bg-[color:var(--accent)] hover:bg-[color:var(--accent-3)] text-[color:var(--ink)] rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               {isGenerating ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -212,7 +212,7 @@ export default function ChatPanel({
               )}
             </button>
           </form>
-          <p className="text-center text-xs text-gray-400 mt-2">Shift+Enter for new line · Enter to send</p>
+          <p className="text-center text-xs text-[color:var(--muted)] mt-2">Shift+Enter for new line · Enter to send</p>
         </div>
       )}
     </div>
