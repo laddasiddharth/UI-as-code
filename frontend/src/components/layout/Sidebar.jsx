@@ -1,8 +1,10 @@
 import React from 'react';
-import { Home, Layers, Settings, FileCode2, History, MessageSquareCode } from 'lucide-react';
+import { Home, Layers, Settings, FileCode2, History, MessageSquareCode, Sparkles } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-const NavItem = ({ icon: Icon, label, active }) => (
+const NavItem = ({ icon: Icon, label, active, onClick }) => (
   <button 
+    onClick={onClick}
     className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
       active 
         ? 'bg-purple-50 text-purple-700' 
@@ -15,6 +17,8 @@ const NavItem = ({ icon: Icon, label, active }) => (
 );
 
 const Sidebar = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   return (
     <>
       {/* Mobile backdrop */}
@@ -35,15 +39,16 @@ const Sidebar = ({ isOpen, onClose }) => {
           
           <div className="space-y-1">
             <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Workspace</h3>
-            <NavItem icon={Home} label="Dashboard" active={true} />
-            <NavItem icon={Layers} label="Projects" />
-            <NavItem icon={MessageSquareCode} label="Generations" />
+            <NavItem icon={Home} label="Dashboard" active={location.pathname === '/'} onClick={() => { navigate('/'); onClose(); }} />
+            <NavItem icon={Sparkles} label="Generate" active={location.pathname === '/generate'} onClick={() => { navigate('/generate'); onClose(); }} />
+            <NavItem icon={Layers} label="Projects" active={false} />
+            <NavItem icon={MessageSquareCode} label="Generations" active={false} />
           </div>
 
           <div className="space-y-1">
             <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Assets</h3>
-            <NavItem icon={FileCode2} label="Components" />
-            <NavItem icon={History} label="History" />
+            <NavItem icon={FileCode2} label="Components" active={false} />
+            <NavItem icon={History} label="History" active={false} />
           </div>
 
         </div>

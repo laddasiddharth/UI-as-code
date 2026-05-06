@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 
-const DashboardLayout = ({ children }) => {
+const DashboardLayout = ({ children, fullscreen = false }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -12,10 +12,12 @@ const DashboardLayout = ({ children }) => {
       <div className="flex-1 flex overflow-hidden">
         <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
         
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto">
-            {children}
-          </div>
+        <main className={`flex-1 overflow-hidden ${fullscreen ? '' : 'overflow-y-auto bg-gray-50 p-4 sm:p-6 lg:p-8'}`}>
+          {fullscreen ? children : (
+            <div className="max-w-7xl mx-auto">
+              {children}
+            </div>
+          )}
         </main>
       </div>
     </div>
