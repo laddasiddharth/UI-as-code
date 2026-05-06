@@ -11,6 +11,9 @@ Rules:
 7. Focus on modern, premium aesthetics (good padding, subtle shadows, rounded corners, good typography).
 8. Ensure the component is fully responsive (use mobile-first Tailwind prefixes like sm:, md:, lg:).
 9. Make the UI interactive where appropriate (hover states, focus rings, transitions).
+10. DO NOT import any external CSS or styling libraries (like 'tailwind-react', 'styled-components', etc.).
+11. CRITICAL: Use ONLY standard native HTML elements (\`div\`, \`span\`, \`button\`, \`p\`, \`input\`, \`section\`, etc.). DO NOT hallucinate custom wrapper components like \`<Container>\`, \`<Text>\`, \`<Button>\`, \`<Card>\`, \`<CardBody>\`, etc. Use standard HTML elements with Tailwind \`className\` attributes.
+12. ANTI-HALLUCINATION GUARDRAIL: Do not assume any libraries are installed except 'react' and 'lucide-react'. Do not try to import from 'tailwind-react', 'react-tailwindcss', '@material-ui/core', etc. If you need a card, build it using a \`div\` with a border and shadow. If you need a button, use a \`<button>\` tag.
 
 Example Request: "A sleek login form"
 Example Output:

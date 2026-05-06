@@ -31,9 +31,48 @@ function ErrorOverlay() {
 export default function LivePreview({ code, isGenerating }) {
   const [activeTab, setActiveTab] = useState('preview');
 
+  // Defensively strip out hallucinated styling libraries and inject 'Self-Healing' mocks
+  const sanitizedCode = (() => {
+    // 1. Remove bad imports
+    const lines = code.split('\n').filter(line => {
+      if (!line.trim().startsWith('import ')) return true;
+      const allowed = [/'react'/, /"react"/, /'lucide-react'/, /"lucide-react"/, /'\.\/lib\/supabase'/, /"\.\/lib\/supabase"/, /'\.\/lib\/firebase'/, /"\.\/lib\/firebase"/, /'firebase\/auth'/, /"firebase\/auth"/];
+      return allowed.some(pattern => pattern.test(line));
+    });
+
+    // 2. Inject fallback mocks for commonly hallucinated components to prevent 'ReferenceError'
+    const mocks = `
+const Card = (props) => <div {...props} />;
+const CardHeader = (props) => <div {...props} />;
+const CardTitle = (props) => <h3 {...props} />;
+const CardContent = (props) => <div {...props} />;
+const CardFooter = (props) => <div {...props} />;
+const CardBody = (props) => <div {...props} />;
+const Button = (props) => <button {...props} />;
+const Text = (props) => <span {...props} />;
+const Heading = (props) => <h2 {...props} />;
+const Container = (props) => <div {...props} />;
+const Section = (props) => <section {...props} />;
+const Row = (props) => <div {...props} />;
+const Col = (props) => <div {...props} />;
+const Input = (props) => <input {...props} />;
+const Label = (props) => <label {...props} />;
+const Icon = (props) => <div {...props} />;
+`;
+
+    // Insert mocks after imports
+    let lastImportIndex = -1;
+    lines.forEach((line, i) => {
+      if (line.trim().startsWith('import ')) lastImportIndex = i;
+    });
+    
+    lines.splice(lastImportIndex + 1, 0, mocks);
+    return lines.join('\n');
+  })();
+
   const files = {
     '/App.js': {
-      code: code,
+      code: sanitizedCode,
       active: true,
     },
     '/tailwind.config.js': {

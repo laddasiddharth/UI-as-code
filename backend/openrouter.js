@@ -21,8 +21,8 @@ export const generateComponentCode = async (userPrompt, history = []) => {
     ];
 
     const completion = await openai.chat.completions.create({
-      // Using Qwen3 Coder 480B - a powerful free coding model via OpenRouter
-      model: "qwen/qwen3-coder-480b-a35b-instruct:free",
+      // Using DeepSeek Chat Free - a highly reliable and capable free model
+      model: "openrouter/auto:free",
       messages: messages,
       temperature: 0.2, // Lower temperature for more deterministic code generation
     });
