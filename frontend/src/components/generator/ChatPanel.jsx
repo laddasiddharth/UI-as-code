@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, RotateCcw, Sparkles, User, Bot, Copy, Check, Database, ChevronDown } from 'lucide-react';
+import { Send, Loader2, RotateCcw, Sparkles, User, Bot, Copy, Check } from 'lucide-react';
 
 function MessageBubble({ message }) {
   const [copied, setCopied] = useState(false);
@@ -48,11 +48,8 @@ export default function ChatPanel({
   onGenerate,
   onReset,
   showInput = true,
-  baasTemplate = '',
-  onBaasChange = () => {},
 }) {
   const [input, setInput] = useState('');
-  const [showBaas, setShowBaas] = useState(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -63,7 +60,7 @@ export default function ChatPanel({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!input.trim() || isGenerating) return;
-    onGenerate(input.trim(), baasTemplate || null);
+    onGenerate(input.trim());
     setInput('');
   };
 
@@ -81,16 +78,8 @@ export default function ChatPanel({
     "A stats dashboard with charts",
   ];
 
-  const BAAS_OPTIONS = [
-    { value: '', label: 'No backend integration' },
-    { value: 'supabase_auth', label: '🔐 Supabase Auth' },
-    { value: 'supabase_data', label: '🗄️ Supabase Data Fetching' },
-    { value: 'firebase_auth', label: '🔥 Firebase Auth' },
-  ];
-
   return (
     <div className="flex flex-col h-full bg-[color:var(--panel-strong)]">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--panel-strong)] border-b border-[color:var(--border)] flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="bg-[color:var(--accent)]/15 p-1 rounded-md">
@@ -110,7 +99,6 @@ export default function ChatPanel({
         )}
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="space-y-4">
@@ -156,45 +144,13 @@ export default function ChatPanel({
 
       {showInput && (
         <div className="p-3 bg-[color:var(--panel-strong)] border-t border-[color:var(--border)] flex-shrink-0">
-          <div className="mb-2">
-            <button
-              onClick={() => setShowBaas(!showBaas)}
-              className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-all ${
-                baasTemplate
-                  ? 'bg-[color:var(--accent-2)]/15 text-[color:var(--accent-2)] border-[color:var(--accent-2)]/30'
-                  : 'bg-[color:var(--panel)] text-[color:var(--muted)] border-[color:var(--border)] hover:border-[color:var(--accent-2)]/40'
-              }`}
-            >
-              <Database className="w-3 h-3" />
-              {baasTemplate ? BAAS_OPTIONS.find(o => o.value === baasTemplate)?.label : 'Add backend integration'}
-              <ChevronDown className={`w-3 h-3 ml-auto transition-transform ${showBaas ? 'rotate-180' : ''}`} />
-            </button>
-            {showBaas && (
-              <div className="mt-1 bg-[color:var(--panel-strong)] border border-[color:var(--border)] rounded-xl shadow-lg overflow-hidden">
-                {BAAS_OPTIONS.map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => { onBaasChange(opt.value); setShowBaas(false); }}
-                    className={`w-full text-left px-3 py-2 text-xs transition-colors ${
-                      baasTemplate === opt.value
-                        ? 'bg-[color:var(--accent-2)]/15 text-[color:var(--accent-2)] font-medium'
-                        : 'text-[color:var(--muted)] hover:bg-[color:var(--panel)]'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
           <form onSubmit={handleSubmit} className="flex items-end gap-2">
             <textarea
               ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Describe a UI component..."
+              placeholder={messages.length > 0 ? "Refine the UI..." : "Describe a UI component..."}
               rows={2}
               className="flex-1 resize-none text-sm px-3 py-2.5 border border-[color:var(--border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)] focus:border-transparent transition-all placeholder-[color:var(--muted)] bg-[color:var(--panel)]"
               disabled={isGenerating}
@@ -211,7 +167,6 @@ export default function ChatPanel({
               )}
             </button>
           </form>
-          <p className="text-center text-xs text-[color:var(--muted)] mt-2">Shift+Enter for new line · Enter to send</p>
         </div>
       )}
     </div>

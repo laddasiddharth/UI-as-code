@@ -1,19 +1,14 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Eye, Code2, Loader2, AlertTriangle, RefreshCw, Copy, Check, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import ExportButton from './ExportButton';
 
-/**
- * LivePreview: Custom Iframe Compiler Edition
- */
 export default function LivePreview({ code, isGenerating, onError, onChatToggle, chatVisible, showChatToggle, onCodeChange }) {
   const [activeTab, setActiveTab] = useState('preview');
-  const [iframeKey, setIframeKey] = useState(0); // For forcing refresh
+  const [iframeKey, setIframeKey] = useState(0);
   const [runtimeError, setRuntimeError] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
   const [localCode, setLocalCode] = useState(code);
   const iframeRef = useRef(null);
 
-  // Sync local code with incoming prop when not editing
   useEffect(() => {
     setLocalCode(code);
   }, [code]);
@@ -23,9 +18,7 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
       await navigator.clipboard.writeText(localCode);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
-    } catch (err) {
-      console.error('Copy failed:', err);
-    }
+    } catch (err) {}
   };
 
   const handleManualUpdate = () => {
@@ -35,29 +28,20 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
     }
   };
 
-  // Sanitize and prepare code for Babel
   const processedCode = useMemo(() => {
     if (!localCode) return '';
     
-    // Remove markdown code blocks if present
     let cleaned = localCode.replace(/^```(?:jsx|js|javascript)?\n/i, '').replace(/\n```$/i, '');
     
-    // 1. Strip React imports - we provide React globals in the iframe scope
     const reactImportRegex = /^import\s+[\s\S]*?from\s+['"]react['"];?/gm;
     cleaned = cleaned.replace(reactImportRegex, '');
 
-    // 2. Remove dangerous/hallucinated local imports safely
-    // BUT convert lucide-react imports to use our internal mock
     const lucideImportRegex = /import\s+{([\s\S]*?)}\s+from\s+['"]lucide-react['"];?/g;
-    cleaned = cleaned.replace(lucideImportRegex, (match, p1) => {
-      return `const {${p1}} = LucideReact;`;
-    });
+    cleaned = cleaned.replace(lucideImportRegex, (match, p1) => `const {${p1}} = LucideReact;`);
 
-    // Strip other imports
     const badImportRegex = /^import\s+[\s\S]*?\s+from\s+['"](?:@\/components|\.\/components|\.\/ui|@\/ui|shadcn|@radix|@mui|antd|chakra|.*\.css)['"][^;]*;?/gm;
     cleaned = cleaned.replace(badImportRegex, '');
 
-    // 3. Define Fallback Mocks for common hallucinated components
     const componentMocks = `
       const Card = ({ children, className = '', ...props }) => (
         <div className={\`bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden \${className}\`} {...props}>{children}</div>
@@ -98,11 +82,10 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
       ${componentMocks}
       ${cleaned}
       
-      // Auto-render logic: find the default export and render it
       try {
         const App = typeof Preview !== 'undefined' ? Preview : 
                     typeof App !== 'undefined' ? App : 
-                    exportDefault; // Fallback for some AI outputs
+                    exportDefault;
         
         const rootElement = document.getElementById('root');
         if (rootElement) {
@@ -116,7 +99,6 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
     `;
   }, [localCode]);
 
-  // Construct the Iframe HTML
   const srcDoc = useMemo(() => {
     return `
       <!DOCTYPE html>
@@ -160,7 +142,6 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
     `;
   }, [processedCode]);
 
-  // Handle messages from the iframe (e.g. errors)
   useEffect(() => {
     const handleMessage = (event) => {
       if (event.data.type === 'error') {
@@ -178,7 +159,6 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
 
   return (
     <div className="absolute inset-0 flex flex-col bg-[color:var(--panel-strong)] overflow-hidden">
-      {/* ── Toolbar ── */}
       <div className="flex items-center justify-between px-4 py-2 bg-[color:var(--panel-strong)] border-b border-[color:var(--border)] flex-shrink-0">
         <div className="flex items-center gap-3">
           {showChatToggle && (
@@ -195,9 +175,7 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
             <button
               onClick={() => setActiveTab('preview')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                activeTab === 'preview'
-                  ? 'bg-[color:var(--accent)]/15 text-[color:var(--ink)]'
-                  : 'text-[color:var(--muted)] hover:text-[color:var(--ink)]'
+                activeTab === 'preview' ? 'bg-[color:var(--accent)]/15 text-[color:var(--ink)]' : 'text-[color:var(--muted)] hover:text-[color:var(--ink)]'
               }`}
             >
               <Eye className="w-3.5 h-3.5" />
@@ -206,9 +184,7 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
             <button
               onClick={() => setActiveTab('code')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                activeTab === 'code'
-                  ? 'bg-[color:var(--accent)]/15 text-[color:var(--ink)]'
-                  : 'text-[color:var(--muted)] hover:text-[color:var(--ink)]'
+                activeTab === 'code' ? 'bg-[color:var(--accent)]/15 text-[color:var(--ink)]' : 'text-[color:var(--muted)] hover:text-[color:var(--ink)]'
               }`}
             >
               <Code2 className="w-3.5 h-3.5" />
@@ -219,18 +195,12 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
         <div className="flex items-center gap-2">
           {activeTab === 'code' && (
             <div className="flex items-center gap-2 mr-2">
-              <button 
-                onClick={handleCopy}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--ink)] transition-colors"
-              >
+              <button onClick={handleCopy} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--ink)] transition-colors">
                 {copySuccess ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
                 {copySuccess ? 'Copied!' : 'Copy'}
               </button>
               {localCode !== code && (
-                <button 
-                  onClick={handleManualUpdate}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium bg-[color:var(--accent)]/15 text-[color:var(--accent)] hover:bg-[color:var(--accent)]/25 rounded-md transition-colors"
-                >
+                <button onClick={handleManualUpdate} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium bg-[color:var(--accent)]/15 text-[color:var(--accent)] hover:bg-[color:var(--accent)]/25 rounded-md transition-colors">
                   <RefreshCw className="w-3 h-3" />
                   Update Preview
                 </button>
@@ -243,14 +213,9 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
               <span>Generating...</span>
             </div>
           )}
-          <button 
-            onClick={() => setIframeKey(k => k + 1)}
-            className="p-1.5 text-[color:var(--muted)] hover:text-[color:var(--ink)] transition-colors"
-            title="Refresh Preview"
-          >
+          <button onClick={() => setIframeKey(k => k + 1)} className="p-1.5 text-[color:var(--muted)] hover:text-[color:var(--ink)] transition-colors" title="Refresh Preview">
             <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
           </button>
-          <ExportButton code={localCode} disabled={isGenerating} />
         </div>
       </div>
 
@@ -277,14 +242,7 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
                 </div>
               </div>
             )}
-            <iframe
-              key={iframeKey}
-              ref={iframeRef}
-              srcDoc={srcDoc}
-              className="w-full h-full border-none bg-white"
-              sandbox="allow-scripts allow-modals"
-              title="Preview"
-            />
+            <iframe key={iframeKey} ref={iframeRef} srcDoc={srcDoc} className="w-full h-full border-none bg-white" sandbox="allow-scripts allow-modals" title="Preview" />
           </div>
         ) : (
           <div className="w-full h-full bg-[#0d1117] flex flex-col">

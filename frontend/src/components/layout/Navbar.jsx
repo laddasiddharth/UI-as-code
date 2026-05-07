@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Bell, UserCircle, Code2, Sparkles, LogOut } from 'lucide-react';
+import { Menu, Code2, LogOut } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Navbar = ({ onMenuToggle }) => {

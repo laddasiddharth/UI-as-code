@@ -12,12 +12,10 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Basic health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'UI-as-Code API is running.' });
 });
 
-// Endpoint to generate React component code
 app.post('/api/generate', async (req, res) => {
   const { prompt, history, baasTemplate, existingCode } = req.body;
 
@@ -25,10 +23,7 @@ app.post('/api/generate', async (req, res) => {
     return res.status(400).json({ error: 'Prompt is required' });
   }
 
-  // Optionally append a BaaS hook template to the prompt
-  const templateSuffix = baasTemplate && BAAS_TEMPLATES[baasTemplate]
-    ? BAAS_TEMPLATES[baasTemplate]
-    : '';
+  const templateSuffix = baasTemplate && BAAS_TEMPLATES[baasTemplate] ? BAAS_TEMPLATES[baasTemplate] : '';
   const fullPrompt = templateSuffix ? `${prompt}\n\n${templateSuffix}` : prompt;
 
   try {

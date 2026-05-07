@@ -2,13 +2,11 @@ import React, { useState } from 'react';
 import ChatPanel from '../../components/generator/ChatPanel';
 import LivePreview from '../../components/generator/LivePreview';
 import { useGeneration } from '../../hooks/useGeneration';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 export default function GeneratorPage() {
   const { code, setCode, messages, isGenerating, generate, reset, repairFromError } = useGeneration();
   const [chatVisible, setChatVisible] = useState(true);
   const [quickInput, setQuickInput] = useState('');
-  const [baasTemplate, setBaasTemplate] = useState('');
 
   const hasMessages = messages.length > 0;
   const showChatPanel = hasMessages && chatVisible;
@@ -16,13 +14,12 @@ export default function GeneratorPage() {
   const handleQuickSubmit = (e) => {
     e.preventDefault();
     if (!quickInput.trim() || isGenerating) return;
-    generate(quickInput.trim(), baasTemplate || null);
+    generate(quickInput.trim());
     setQuickInput('');
   };
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-[color:var(--bg)] relative">
-      {/* Chat Panel */}
       <div
         className={`flex-shrink-0 border-r border-white/10 transition-all duration-300 ease-in-out overflow-hidden h-full ${
           showChatPanel ? 'w-80' : 'w-0'
@@ -34,14 +31,11 @@ export default function GeneratorPage() {
             isGenerating={isGenerating}
             onGenerate={generate}
             onReset={reset}
-            showInput={!hasMessages}
-            baasTemplate={baasTemplate}
-            onBaasChange={setBaasTemplate}
+            showInput={true}
           />
         </div>
       </div>
 
-      {/* Live Preview (takes remaining space) */}
       <div className="flex-1 flex flex-col relative overflow-hidden h-full">
         <div className="flex-1 relative w-full h-full">
           <LivePreview
@@ -83,30 +77,6 @@ export default function GeneratorPage() {
                 </form>
               </div>
             </div>
-          </div>
-        )}
-
-        {hasMessages && (
-          <div className="absolute bottom-4 left-1/2 z-20 w-[min(760px,95%)] -translate-x-1/2">
-            <form onSubmit={handleQuickSubmit} className="flex items-end gap-2 glass-panel rounded-2xl p-3">
-              <div className="flex-1">
-                <textarea
-                  value={quickInput}
-                  onChange={(e) => setQuickInput(e.target.value)}
-                  placeholder="Refine the UI..."
-                  rows={2}
-                  className="w-full resize-none text-sm px-3 py-2 border border-[color:var(--border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)] focus:border-transparent transition-all placeholder-[color:var(--muted)] bg-[color:var(--panel-strong)]"
-                  disabled={isGenerating}
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={!quickInput.trim() || isGenerating}
-                className="flex-shrink-0 h-10 px-4 bg-[color:var(--accent-3)] hover:bg-[color:var(--accent)] text-[color:var(--ink)] rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-              >
-                {isGenerating ? 'Updating...' : 'Update'}
-              </button>
-            </form>
           </div>
         )}
       </div>

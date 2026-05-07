@@ -7,8 +7,8 @@ const openai = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
   apiKey: process.env.OPENROUTER_API_KEY || "placeholder_key",
   defaultHeaders: {
-    "HTTP-Referer": "http://localhost:3001", // Optional, for including your app on openrouter.ai rankings.
-    "X-Title": "UI-as-Code Platform", // Optional. Shows in rankings on openrouter.ai.
+    "HTTP-Referer": "http://localhost:3001",
+    "X-Title": "UI-as-Code Platform",
   }
 });
 
@@ -22,7 +22,6 @@ function extractCode(aiResponse) {
     return match[1].trim();
   }
 
-  // Fallback: if no code block, try to find everything from the first 'import' to the last '}'
   const importMatch = aiResponse.match(/import[\s\S]*export default[\s\S]*\}/);
   if (importMatch) {
     return importMatch[0].trim();
@@ -41,10 +40,9 @@ export const generateComponentCode = async (userPrompt, history = [], existingCo
     ];
 
     const completion = await openai.chat.completions.create({
-      // Using DeepSeek Chat Free - a highly reliable and capable free model
       model: "openrouter/auto:free",
       messages: messages,
-      temperature: 0.2, // Lower temperature for more deterministic code generation
+      temperature: 0.2,
     });
 
     const raw = completion.choices[0].message.content;

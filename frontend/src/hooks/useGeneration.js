@@ -29,8 +29,8 @@ function buildFixPrompt(errorToFix, previousCode) {
 
 export function useGeneration() {
   const [code, setCode] = useState(DEFAULT_CODE);
-  const [history, setHistory] = useState([]); // [{role, content}]
-  const [messages, setMessages] = useState([]); // [{role, text, code}] for UI
+  const [history, setHistory] = useState([]);
+  const [messages, setMessages] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState(null);
   const [autoFixCount, setAutoFixCount] = useState(0);
@@ -43,10 +43,7 @@ export function useGeneration() {
     setLastAutoFixKey('');
 
     const existingCode = code === DEFAULT_CODE ? '' : code;
-
-    // Optimistically add user message to UI
-    const userMsg = { role: 'user', text: prompt };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages(prev => [...prev, { role: 'user', text: prompt }]);
 
     try {
       const response = await fetch(`${API_URL}/api/generate`, {
@@ -62,14 +59,13 @@ export function useGeneration() {
 
       const { code: newCode } = await response.json();
       
-      // Batch state updates carefully
       setCode(newCode);
       setHistory(prev => [
         ...prev,
         { role: 'user', content: prompt },
         { role: 'assistant', content: newCode },
       ]);
-      setMessages(prev => [...prev, { role: 'assistant', text: 'Here\'s your generated component!', code: newCode }]);
+      setMessages(prev => [...prev, { role: 'assistant', text: "Here's your generated component!", code: newCode }]);
     } catch (err) {
       setError(err.message);
       setMessages(prev => [...prev, { role: 'assistant', text: `Error: ${err.message}`, isError: true }]);
@@ -79,8 +75,7 @@ export function useGeneration() {
   }, [code, history]);
 
   const repairFromError = useCallback(async (errorMessage, previousCode) => {
-    if (!errorMessage || !previousCode || isGenerating) return;
-    if (autoFixCount >= MAX_AUTO_FIXES) return;
+    if (!errorMessage || !previousCode || isGenerating || autoFixCount >= MAX_AUTO_FIXES) return;
 
     const autoFixKey = `${errorMessage}::${previousCode.length}`;
     if (autoFixKey === lastAutoFixKey) return;
@@ -91,27 +86,17 @@ export function useGeneration() {
 
     try {
       const fixPrompt = buildFixPrompt(errorMessage, previousCode);
-
       const response = await fetch(`${API_URL}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: fixPrompt, history, existingCode: previousCode }),
       });
 
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Auto-fix failed.');
-      }
+      if (!response.ok) throw new Error('Auto-fix failed.');
 
       const { code: newCode } = await response.json();
       setCode(newCode);
-
-      const newHistory = [
-        ...history,
-        { role: 'user', content: fixPrompt },
-        { role: 'assistant', content: newCode },
-      ];
-      setHistory(newHistory);
+      setHistory(prev => [...prev, { role: 'user', content: fixPrompt }, { role: 'assistant', content: newCode }]);
     } catch (err) {
       setError(err.message);
     } finally {
