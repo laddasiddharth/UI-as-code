@@ -25,15 +25,6 @@ const Navbar = ({ onMenuToggle }) => {
       </div>
       
       <div className="flex items-center gap-2 sm:gap-4">
-        <button className="flex items-center gap-2 text-sm font-medium text-[color:var(--ink)] bg-[color:var(--accent-3)]/40 hover:bg-[color:var(--accent-3)]/70 px-3 py-1.5 rounded-full transition-colors border border-[color:var(--accent-3)]">
-          <Sparkles className="w-4 h-4" />
-          <span className="hidden sm:inline">Upgrade</span>
-        </button>
-        <div className="w-px h-6 bg-[color:var(--border)] mx-1"></div>
-        <button className="p-2 rounded-full hover:bg-[color:var(--panel)] text-[color:var(--muted)] relative transition-colors">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[color:var(--accent)] rounded-full border border-[color:var(--panel-strong)]"></span>
-        </button>
         <button 
           onClick={signOut}
           className="flex items-center gap-2 p-2 rounded-full hover:bg-[color:var(--accent)]/10 text-[color:var(--muted)] hover:text-[color:var(--accent)] transition-colors"

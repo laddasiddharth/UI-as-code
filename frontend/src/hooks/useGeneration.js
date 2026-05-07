@@ -127,5 +127,5 @@ export function useGeneration() {
     setError(null);
   }, []);
 
-  return { code, messages, isGenerating, error, generate, reset, repairFromError };
+  return { code, setCode, messages, isGenerating, error, generate, reset, repairFromError };
 }

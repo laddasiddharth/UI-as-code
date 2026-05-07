@@ -5,7 +5,7 @@ import { useGeneration } from '../../hooks/useGeneration';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 export default function GeneratorPage() {
-  const { code, messages, isGenerating, generate, reset, repairFromError } = useGeneration();
+  const { code, setCode, messages, isGenerating, generate, reset, repairFromError } = useGeneration();
   const [chatVisible, setChatVisible] = useState(true);
   const [quickInput, setQuickInput] = useState('');
   const [baasTemplate, setBaasTemplate] = useState('');
@@ -43,22 +43,15 @@ export default function GeneratorPage() {
 
       {/* Live Preview (takes remaining space) */}
       <div className="flex-1 flex flex-col relative overflow-hidden h-full">
-        {/* Toggle chat panel button */}
-        {hasMessages && (
-          <button
-            onClick={() => setChatVisible(!chatVisible)}
-            className="absolute top-3 left-3 z-30 p-1.5 rounded-md bg-[color:var(--panel-strong)]/90 hover:bg-[color:var(--panel-strong)] text-[color:var(--muted)] hover:text-[color:var(--ink)] transition-all shadow-sm"
-            title={chatVisible ? 'Hide chat' : 'Show chat'}
-          >
-            {chatVisible ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
-          </button>
-        )}
-
         <div className="flex-1 relative w-full h-full">
           <LivePreview
             code={code}
             isGenerating={isGenerating}
             onError={(errorMessage) => repairFromError(errorMessage, code)}
+            onChatToggle={() => setChatVisible(!chatVisible)}
+            chatVisible={chatVisible}
+            showChatToggle={hasMessages}
+            onCodeChange={setCode}
           />
         </div>
 

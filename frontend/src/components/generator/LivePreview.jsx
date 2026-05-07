@@ -1,27 +1,46 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Eye, Code2, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Eye, Code2, Loader2, AlertTriangle, RefreshCw, Copy, Check, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import ExportButton from './ExportButton';
 
 /**
  * LivePreview: Custom Iframe Compiler Edition
- * 
- * Why this instead of Sandpack?
- * 1. ISP Immunity: No CodeSandbox background requests that ISPs like Jio often block.
- * 2. Performance: Transpilation happens instantly in-memory without a virtual Node environment.
- * 3. Simplicity: Single-file React/Tailwind component rendering is rock-solid.
  */
-export default function LivePreview({ code, isGenerating, onError }) {
+export default function LivePreview({ code, isGenerating, onError, onChatToggle, chatVisible, showChatToggle, onCodeChange }) {
   const [activeTab, setActiveTab] = useState('preview');
   const [iframeKey, setIframeKey] = useState(0); // For forcing refresh
   const [runtimeError, setRuntimeError] = useState(null);
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [localCode, setLocalCode] = useState(code);
   const iframeRef = useRef(null);
+
+  // Sync local code with incoming prop when not editing
+  useEffect(() => {
+    setLocalCode(code);
+  }, [code]);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(localCode);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Copy failed:', err);
+    }
+  };
+
+  const handleManualUpdate = () => {
+    if (onCodeChange) {
+      onCodeChange(localCode);
+      setActiveTab('preview');
+    }
+  };
 
   // Sanitize and prepare code for Babel
   const processedCode = useMemo(() => {
-    if (!code) return '';
+    if (!localCode) return '';
     
     // Remove markdown code blocks if present
-    let cleaned = code.replace(/^```(?:jsx|js|javascript)?\n/i, '').replace(/\n```$/i, '');
+    let cleaned = localCode.replace(/^```(?:jsx|js|javascript)?\n/i, '').replace(/\n```$/i, '');
     
     // 1. Strip React imports - we provide React globals in the iframe scope
     const reactImportRegex = /^import\s+[\s\S]*?from\s+['"]react['"];?/gm;
@@ -95,7 +114,7 @@ export default function LivePreview({ code, isGenerating, onError }) {
         window.parent.postMessage({ type: 'error', message: err.message }, '*');
       }
     `;
-  }, [code]);
+  }, [localCode]);
 
   // Construct the Iframe HTML
   const srcDoc = useMemo(() => {
@@ -105,49 +124,25 @@ export default function LivePreview({ code, isGenerating, onError }) {
         <head>
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          
-          <!-- Tailwind CSS -->
           <script src="https://cdn.tailwindcss.com"></script>
-          
-          <!-- Babel Standalone for JSX transpilation -->
           <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
-          
-          <!-- React & ReactDOM -->
           <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
           <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
-          
-          <!-- Mocking Lucide React -->
           <script>
-            // Simple mock for Lucide React components
-            // In a real app, you might want to use the Lucide CDN properly
-            window.Lucide = {
-              createIcons: () => {},
-              // Proxy to catch any icon names the AI might use
-            };
-            
-            // Create a Proxy that returns a basic SVG for any Lucide component access
+            window.Lucide = { createIcons: () => {} };
             const LucideProxy = new Proxy({}, {
               get: (target, name) => {
                 return (props) => {
                   const size = props.size || props.height || 24;
                   return React.createElement('svg', {
-                    width: size,
-                    height: size,
-                    viewBox: '0 0 24 24',
-                    fill: 'none',
-                    stroke: 'currentColor',
-                    strokeWidth: 2,
-                    strokeLinecap: 'round',
-                    strokeLinejoin: 'round',
-                    className: props.className,
-                    ...props
+                    width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+                    strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', className: props.className, ...props
                   }, React.createElement('circle', { cx: 12, cy: 12, r: 10 }));
                 }
               }
             });
             window.LucideReact = LucideProxy;
           </script>
-
           <style>
             body { margin: 0; padding: 0; background: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
             #root { min-height: 100vh; }
@@ -156,12 +151,8 @@ export default function LivePreview({ code, isGenerating, onError }) {
         <body>
           <div id="root"></div>
           <script type="text/babel">
-            // Expose components to the script's scope
             const { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } = React;
-            
-            // Re-map common export patterns
             let exportDefault = null;
-            
             ${processedCode.replace(/export default/g, 'exportDefault =')}
           </script>
         </body>
@@ -181,40 +172,71 @@ export default function LivePreview({ code, isGenerating, onError }) {
     return () => window.removeEventListener('message', handleMessage);
   }, [onError]);
 
-  // Clear runtime error when code changes
   useEffect(() => {
     setRuntimeError(null);
-  }, [code]);
+  }, [localCode]);
 
   return (
     <div className="absolute inset-0 flex flex-col bg-[color:var(--panel-strong)] overflow-hidden">
-      {/* Toolbar */}
+      {/* ── Toolbar ── */}
       <div className="flex items-center justify-between px-4 py-2 bg-[color:var(--panel-strong)] border-b border-[color:var(--border)] flex-shrink-0">
-        <div className="flex gap-1">
-          <button
-            onClick={() => setActiveTab('preview')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-              activeTab === 'preview'
-                ? 'bg-[color:var(--accent)]/15 text-[color:var(--ink)]'
-                : 'text-[color:var(--muted)] hover:text-[color:var(--ink)]'
-            }`}
-          >
-            <Eye className="w-3.5 h-3.5" />
-            Preview
-          </button>
-          <button
-            onClick={() => setActiveTab('code')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-              activeTab === 'code'
-                ? 'bg-[color:var(--accent)]/15 text-[color:var(--ink)]'
-                : 'text-[color:var(--muted)] hover:text-[color:var(--ink)]'
-            }`}
-          >
-            <Code2 className="w-3.5 h-3.5" />
-            Code
-          </button>
+        <div className="flex items-center gap-3">
+          {showChatToggle && (
+            <button
+              onClick={onChatToggle}
+              className="p-1.5 rounded-md hover:bg-[color:var(--panel)] text-[color:var(--muted)] hover:text-[color:var(--ink)] transition-colors border border-[color:var(--border)] shadow-sm"
+              title={chatVisible ? 'Hide chat' : 'Show chat'}
+            >
+              {chatVisible ? <PanelLeftClose className="w-3.5 h-3.5" /> : <PanelLeftOpen className="w-3.5 h-3.5" />}
+            </button>
+          )}
+          <div className="w-px h-4 bg-[color:var(--border)] mx-1 hidden sm:block"></div>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setActiveTab('preview')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                activeTab === 'preview'
+                  ? 'bg-[color:var(--accent)]/15 text-[color:var(--ink)]'
+                  : 'text-[color:var(--muted)] hover:text-[color:var(--ink)]'
+              }`}
+            >
+              <Eye className="w-3.5 h-3.5" />
+              Preview
+            </button>
+            <button
+              onClick={() => setActiveTab('code')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                activeTab === 'code'
+                  ? 'bg-[color:var(--accent)]/15 text-[color:var(--ink)]'
+                  : 'text-[color:var(--muted)] hover:text-[color:var(--ink)]'
+              }`}
+            >
+              <Code2 className="w-3.5 h-3.5" />
+              Code
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-2">
+          {activeTab === 'code' && (
+            <div className="flex items-center gap-2 mr-2">
+              <button 
+                onClick={handleCopy}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--ink)] transition-colors"
+              >
+                {copySuccess ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                {copySuccess ? 'Copied!' : 'Copy'}
+              </button>
+              {localCode !== code && (
+                <button 
+                  onClick={handleManualUpdate}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium bg-[color:var(--accent)]/15 text-[color:var(--accent)] hover:bg-[color:var(--accent)]/25 rounded-md transition-colors"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Update Preview
+                </button>
+              )}
+            </div>
+          )}
           {isGenerating && (
             <div className="flex items-center gap-1.5 text-xs text-[color:var(--accent)]">
               <Loader2 className="w-3 h-3 animate-spin" />
@@ -228,11 +250,10 @@ export default function LivePreview({ code, isGenerating, onError }) {
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
           </button>
-          <ExportButton code={code} disabled={isGenerating} />
+          <ExportButton code={localCode} disabled={isGenerating} />
         </div>
       </div>
 
-      {/* Main Area */}
       <div className="flex-1 relative bg-white overflow-hidden">
         {isGenerating && (
           <div className="absolute inset-0 z-20 bg-[color:var(--panel-strong)]/80 backdrop-blur-sm flex items-center justify-center">
@@ -266,10 +287,14 @@ export default function LivePreview({ code, isGenerating, onError }) {
             />
           </div>
         ) : (
-          <div className="w-full h-full bg-[#151515] overflow-auto p-4">
-            <pre className="text-sm font-mono text-gray-300 whitespace-pre-wrap leading-relaxed">
-              {code}
-            </pre>
+          <div className="w-full h-full bg-[#0d1117] flex flex-col">
+            <textarea
+              value={localCode}
+              onChange={(e) => setLocalCode(e.target.value)}
+              spellCheck="false"
+              className="flex-1 w-full bg-transparent text-gray-300 font-mono text-sm p-6 focus:outline-none resize-none leading-relaxed selection:bg-purple-500/30"
+              placeholder="Paste your code here..."
+            />
           </div>
         )}
       </div>
