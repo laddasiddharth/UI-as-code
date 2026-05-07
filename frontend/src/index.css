@@ -27,7 +27,7 @@ body {
 	font-family: var(--font-body);
 	color: var(--ink);
 	background: var(--bg);
-	min-height: 100vh;
+	height: 100vh;
 }
 
 .font-display {
@@ -38,7 +38,7 @@ body {
 .app-shell {
 	position: relative;
 	background: var(--bg);
-	min-height: 100vh;
+	height: 100vh;
 	overflow: hidden;
 }
 

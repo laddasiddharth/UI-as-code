@@ -21,7 +21,8 @@ Additional rules:
 - Make the UI interactive where appropriate (hover states, focus rings, transitions).
 - Do not import any external CSS or styling libraries (like 'tailwind-react', 'styled-components', etc.).
 - Use only standard native HTML elements (div, span, button, p, input, section, etc.). Do not hallucinate custom wrapper components like <Container>, <Text>, <Button>, <Card>, <CardBody>, etc.
-- Do not assume any libraries are installed except 'react' and 'lucide-react'. If you need a card, build it using a div with a border and shadow. If you need a button, use a <button> tag.
+- Do not assume any libraries are installed except 'react', 'lucide-react', 'framer-motion', 'clsx', and 'tailwind-merge'. If you need a card, build it using a div with a border and shadow. If you need a button, use a <button> tag.
+- NEVER return a simple "Hello World" or placeholder. Always build a complete, detailed UI with realistic content and layout.
 `;
 
 export function getIterationPrompt(userPrompt, existingCode) {

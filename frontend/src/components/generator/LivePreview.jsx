@@ -79,7 +79,16 @@ export default function LivePreview({ code, isGenerating, onError }) {
     // 1. Remove bad imports
     const lines = code.split('\n').filter(line => {
       if (!line.trim().startsWith('import ')) return true;
-      const allowed = [/'react'/, /"react"/, /'lucide-react'/, /"lucide-react"/, /'\.\/lib\/supabase'/, /"\.\/lib\/supabase"/, /'\.\/lib\/firebase'/, /"\.\/lib\/firebase"/, /'firebase\/auth'/, /"firebase\/auth"/];
+      const allowed = [
+        /'react'/, /"react"/, 
+        /'lucide-react'/, /"lucide-react"/, 
+        /'framer-motion'/, /"framer-motion"/,
+        /'clsx'/, /"clsx"/,
+        /'tailwind-merge'/, /"tailwind-merge"/,
+        /'\.\/lib\/supabase'/, /"\.\/lib\/supabase"/, 
+        /'\.\/lib\/firebase'/, /"\.\/lib\/firebase"/, 
+        /'firebase\/auth'/, /"firebase\/auth"/
+      ];
       return allowed.some(pattern => pattern.test(line));
     });
 
@@ -131,7 +140,8 @@ export default function LivePreview({ code, isGenerating, onError }) {
     if (mocks) {
       lines.splice(lastImportIndex + 1, 0, `/* Injected Mocks */\n${mocks}`);
     }
-    return lines.join('\n');
+    const result = lines.join('\n');
+    return result;
   })();
 
   const files = {
@@ -141,6 +151,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './styles.css';
 
+console.log('Index.js loaded, rendering App...');
 const root = createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
@@ -151,7 +162,7 @@ root.render(
 );`,
       hidden: true,
     },
-    '/App.jsx': {
+    '/App.js': {
       code: sanitizedCode,
       active: true,
     },
@@ -194,10 +205,15 @@ root.render(
       hidden: true,
     },
     '/styles.css': {
-      code: `html, body { height: 100%; margin: 0; }
-body { display: flex; background: #ffffff; }
-#root { flex: 1; height: 100%; min-height: 100vh; display: flex; flex-direction: column; }
-#root > * { flex: 1; min-height: 100%; width: 100%; display: flex; flex-direction: column; }
+      code: `
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  font-family: sans-serif;
+  background-color: white;
+}
 `,
       hidden: true,
     },
@@ -208,7 +224,7 @@ body { display: flex; background: #ffffff; }
   };
 
   return (
-    <div className="flex flex-col h-full bg-[color:var(--panel-strong)] overflow-hidden">
+    <div className="absolute inset-0 flex flex-col bg-[color:var(--panel-strong)] overflow-hidden">
       {/* Toolbar */}
       <div className="flex items-center justify-between px-4 py-2 bg-[color:var(--panel-strong)] border-b border-[color:var(--border)] flex-shrink-0">
         <div className="flex gap-1">
@@ -252,7 +268,7 @@ body { display: flex; background: #ffffff; }
       </div>
 
       {/* Sandpack */}
-      <div className="flex-1 relative overflow-hidden">
+      <div className="flex-1 w-full h-full min-h-0 relative bg-white">
         {/* Generating overlay */}
         {isGenerating && (
           <div className="absolute inset-0 z-20 bg-[color:var(--panel-strong)]/80 backdrop-blur-sm flex items-center justify-center">
@@ -273,7 +289,10 @@ body { display: flex; background: #ffffff; }
           customSetup={{
             dependencies: {
               'lucide-react': 'latest',
-              'tailwindcss': 'latest',
+              'framer-motion': 'latest',
+              'clsx': 'latest',
+              'tailwind-merge': 'latest',
+              'tailwindcss': 'latest'
             },
             entry: '/index.js',
           }}
@@ -281,43 +300,41 @@ body { display: flex; background: #ffffff; }
             externalResources: [
               'https://cdn.tailwindcss.com',
             ],
+            initMode: 'immediate',
+            recompileMode: 'immediate',
           }}
         >
           <ErrorReporter onError={onError} isGenerating={isGenerating} />
           <SandpackLayout
             style={{
               height: '100%',
+              width: '100%',
               border: 'none',
               borderRadius: 0,
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              minHeight: 0,
             }}
           >
-            {activeTab === 'preview' ? (
-              <div className="relative w-full h-full overflow-auto bg-[color:var(--panel-strong)]">
-                <PreviewErrorBoundary resetKey={code}>
-                  <SandpackPreview
-                    style={{ height: '100%', overflow: 'auto', background: 'var(--panel-strong)' }}
-                    showNavigator={false}
-                    showRefreshButton={true}
-                  />
-                </PreviewErrorBoundary>
-                <ErrorOverlay />
-              </div>
-            ) : (
-              <div className="w-full flex-1 min-h-0 overflow-auto">
-                <SandpackCodeEditor
-                  style={{ height: '100%', minHeight: 0, overflow: 'auto' }}
-                  showTabs={false}
-                  showLineNumbers={true}
-                  showInlineErrors={true}
-                  wrapContent={false}
-                  readOnly={false}
+            <div className={`flex-1 relative w-full h-full bg-white ${activeTab !== 'preview' ? 'hidden' : ''}`}>
+              <PreviewErrorBoundary resetKey={code}>
+                <SandpackPreview
+                  style={{ height: '100%', width: '100%' }}
+                  showNavigator={false}
+                  showRefreshButton={true}
                 />
-              </div>
-            )}
+              </PreviewErrorBoundary>
+              <ErrorOverlay />
+            </div>
+            
+            <div className={`flex-1 min-h-0 w-full overflow-auto bg-[#151515] ${activeTab !== 'code' ? 'hidden' : ''}`}>
+              <SandpackCodeEditor
+                style={{ height: 'auto', minHeight: '100%' }}
+                showTabs={false}
+                showLineNumbers={true}
+                showInlineErrors={true}
+                wrapContent={false}
+                readOnly={false}
+                closableTabs={false}
+              />
+            </div>
           </SandpackLayout>
         </SandpackProvider>
       </div>

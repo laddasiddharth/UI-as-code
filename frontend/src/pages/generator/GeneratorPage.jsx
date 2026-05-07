@@ -21,10 +21,10 @@ export default function GeneratorPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-[color:var(--bg)]">
+    <div className="flex h-full w-full overflow-hidden bg-[color:var(--bg)] relative">
       {/* Chat Panel */}
       <div
-        className={`flex-shrink-0 border-r border-white/10 transition-all duration-300 ease-in-out overflow-hidden ${
+        className={`flex-shrink-0 border-r border-white/10 transition-all duration-300 ease-in-out overflow-hidden h-full ${
           showChatPanel ? 'w-80' : 'w-0'
         }`}
       >
@@ -42,7 +42,7 @@ export default function GeneratorPage() {
       </div>
 
       {/* Live Preview (takes remaining space) */}
-      <div className="flex-1 relative overflow-hidden">
+      <div className="flex-1 flex flex-col relative overflow-hidden h-full">
         {/* Toggle chat panel button */}
         {hasMessages && (
           <button
@@ -54,11 +54,13 @@ export default function GeneratorPage() {
           </button>
         )}
 
-        <LivePreview
-          code={code}
-          isGenerating={isGenerating}
-          onError={(errorMessage) => repairFromError(errorMessage, code)}
-        />
+        <div className="flex-1 relative w-full h-full">
+          <LivePreview
+            code={code}
+            isGenerating={isGenerating}
+            onError={(errorMessage) => repairFromError(errorMessage, code)}
+          />
+        </div>
 
         {!hasMessages && (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-[color:var(--bg)]/70 backdrop-blur-sm">

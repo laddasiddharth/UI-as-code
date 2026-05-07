@@ -15,15 +15,20 @@ const openai = new OpenAI({
 function extractCode(aiResponse) {
   if (!aiResponse || typeof aiResponse !== 'string') return '';
 
-  const codeBlockRegex = /```(?:jsx|javascript|js)?\n([\s\S]*?)```/i;
+  const codeBlockRegex = /```(?:jsx|javascript|js|tsx)?\n([\s\S]*?)```/i;
   const match = aiResponse.match(codeBlockRegex);
 
   if (match && match[1]) {
     return match[1].trim();
   }
 
-  // Fallback: remove common conversational prefixes if the model skipped code fences
-  return aiResponse.replace(/^(Sure|Here is|Certainly|Okay|Alright)[^\n]*\n/i, '').trim();
+  // Fallback: if no code block, try to find everything from the first 'import' to the last '}'
+  const importMatch = aiResponse.match(/import[\s\S]*export default[\s\S]*\}/);
+  if (importMatch) {
+    return importMatch[0].trim();
+  }
+
+  return aiResponse.replace(/^(Sure|Here is|Certainly|Okay|Alright|As an AI)[^\n]*\n/i, '').trim();
 }
 
 export const generateComponentCode = async (userPrompt, history = [], existingCode = '') => {

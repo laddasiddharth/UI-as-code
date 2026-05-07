@@ -61,17 +61,14 @@ export function useGeneration() {
       }
 
       const { code: newCode } = await response.json();
+      
+      // Batch state updates carefully
       setCode(newCode);
-
-      // Update conversation history for iterative context
-      const newHistory = [
-        ...history,
+      setHistory(prev => [
+        ...prev,
         { role: 'user', content: prompt },
         { role: 'assistant', content: newCode },
-      ];
-      setHistory(newHistory);
-
-      // Add assistant response to UI messages
+      ]);
       setMessages(prev => [...prev, { role: 'assistant', text: 'Here\'s your generated component!', code: newCode }]);
     } catch (err) {
       setError(err.message);
