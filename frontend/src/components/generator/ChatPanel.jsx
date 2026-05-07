@@ -119,7 +119,6 @@ export default function ChatPanel({
                 <Sparkles className="w-6 h-6 text-[color:var(--ink)]" />
               </div>
               <h3 className="text-sm font-semibold text-[color:var(--ink)] mb-1">Describe your UI</h3>
-              <p className="text-xs text-[color:var(--muted)]">Powered by Qwen3 Coder 480B</p>
             </div>
             <div className="grid grid-cols-1 gap-2">
               {suggestions.map((s, i) => (

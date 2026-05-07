@@ -84,32 +84,53 @@ export default function LivePreview({ code, isGenerating, onError }) {
     });
 
     // 2. Inject fallback mocks for commonly hallucinated components to prevent 'ReferenceError'
-    const mocks = `
-const Card = (props) => <div {...props} />;
-const CardHeader = (props) => <div {...props} />;
-const CardTitle = (props) => <h3 {...props} />;
-const CardContent = (props) => <div {...props} />;
-const CardFooter = (props) => <div {...props} />;
-const CardBody = (props) => <div {...props} />;
-const Button = (props) => <button {...props} />;
-const Text = (props) => <span {...props} />;
-const Heading = (props) => <h2 {...props} />;
-const Container = (props) => <div {...props} />;
-const Section = (props) => <section {...props} />;
-const Row = (props) => <div {...props} />;
-const Col = (props) => <div {...props} />;
-const Input = (props) => <input {...props} />;
-const Label = (props) => <label {...props} />;
-const Icon = (props) => <div {...props} />;
-`;
+    const componentsToMock = [
+      'Card',
+      'CardHeader',
+      'CardTitle',
+      'CardContent',
+      'CardFooter',
+      'CardBody',
+      'Button',
+      'Text',
+      'Heading',
+      'Container',
+      'Section',
+      'Row',
+      'Col',
+      'Input',
+      'Label',
+      'Icon',
+    ];
+
+    const mocks = componentsToMock
+      .filter(comp => {
+        const isDefined = code.includes(`const ${comp}`)
+          || code.includes(`function ${comp}`)
+          || code.includes(`let ${comp}`)
+          || code.includes(`class ${comp}`);
+        return !isDefined;
+      })
+      .map(comp => {
+        if (comp === 'Button') return `const ${comp} = (props) => <button {...props} />;`;
+        if (comp === 'Input') return `const ${comp} = (props) => <input {...props} />;`;
+        if (comp === 'Label') return `const ${comp} = (props) => <label {...props} />;`;
+        if (comp === 'Text') return `const ${comp} = (props) => <span {...props} />;`;
+        if (comp === 'Heading' || comp === 'CardTitle') return `const ${comp} = (props) => <h3 {...props} />;`;
+        if (comp === 'Section') return `const ${comp} = (props) => <section {...props} />;`;
+        return `const ${comp} = (props) => <div {...props} />;`;
+      })
+      .join('\n');
 
     // Insert mocks after imports
     let lastImportIndex = -1;
     lines.forEach((line, i) => {
       if (line.trim().startsWith('import ')) lastImportIndex = i;
     });
-    
-    lines.splice(lastImportIndex + 1, 0, mocks);
+
+    if (mocks) {
+      lines.splice(lastImportIndex + 1, 0, `/* Injected Mocks */\n${mocks}`);
+    }
     return lines.join('\n');
   })();
 
@@ -130,9 +151,47 @@ root.render(
 );`,
       hidden: true,
     },
-    '/App.js': {
+    '/App.jsx': {
       code: sanitizedCode,
       active: true,
+    },
+    '/index.html': {
+      code: `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UI Preview</title>
+    <script>
+      tailwind = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: '#fef2f2',
+                100: '#fee2e2',
+                200: '#fecaca',
+                300: '#fca5a5',
+                400: '#f87171',
+                500: '#ef4444',
+                600: '#dc2626',
+                700: '#b91c1c',
+                800: '#991b1b',
+                900: '#7f1d1d'
+              }
+            }
+          }
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.js"></script>
+  </body>
+</html>
+`,
+      hidden: true,
     },
     '/styles.css': {
       code: `html, body { height: 100%; margin: 0; }
@@ -202,7 +261,6 @@ body { display: flex; background: #ffffff; }
                 <Loader2 className="w-6 h-6 text-[color:var(--accent)] animate-spin" />
               </div>
               <p className="text-[color:var(--ink)] text-sm font-medium">Building your component...</p>
-              <p className="text-[color:var(--muted)] text-xs mt-1">Powered by Qwen3 Coder 480B</p>
             </div>
           </div>
         )}
