@@ -1,227 +1,190 @@
-import React, { useEffect, useState } from 'react';
-import {
-  SandpackProvider,
-  SandpackLayout,
-  SandpackCodeEditor,
-  SandpackPreview,
-  useSandpack,
-} from '@codesandbox/sandpack-react';
-import { atomDark } from '@codesandbox/sandpack-themes';
-import { Eye, Code2, Loader2, AlertTriangle } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Eye, Code2, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 import ExportButton from './ExportButton';
 
-class PreviewErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, errorMessage: '' };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true, errorMessage: error.message };
-  }
-
-  componentDidUpdate(prevProps) {
-    if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
-      this.setState({ hasError: false, errorMessage: '' });
-    }
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="p-4 bg-red-100 text-red-700 font-mono text-xs">
-          <p>Compiler Error:</p>
-          <pre>{this.state.errorMessage}</pre>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
-
-// Inner component to read sandpack error state
-function ErrorOverlay() {
-  const { sandpack } = useSandpack();
-  const hasError = sandpack.error;
-  if (!hasError) return null;
-  return (
-    <div className="absolute bottom-0 left-0 right-0 z-10 bg-red-900/95 backdrop-blur-sm text-red-200 p-3 border-t border-red-700">
-      <div className="flex items-start gap-2">
-        <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-xs font-semibold text-red-300 mb-0.5">Runtime Error</p>
-          <p className="text-xs font-mono leading-relaxed">{sandpack.error.message}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ErrorReporter({ onError, isGenerating }) {
-  const { sandpack } = useSandpack();
-
-  useEffect(() => {
-    if (!onError || isGenerating) return;
-    if (sandpack.error?.message) {
-      onError(sandpack.error.message);
-    }
-  }, [onError, isGenerating, sandpack.error]);
-
-  return null;
-}
-
+/**
+ * LivePreview: Custom Iframe Compiler Edition
+ * 
+ * Why this instead of Sandpack?
+ * 1. ISP Immunity: No CodeSandbox background requests that ISPs like Jio often block.
+ * 2. Performance: Transpilation happens instantly in-memory without a virtual Node environment.
+ * 3. Simplicity: Single-file React/Tailwind component rendering is rock-solid.
+ */
 export default function LivePreview({ code, isGenerating, onError }) {
   const [activeTab, setActiveTab] = useState('preview');
+  const [iframeKey, setIframeKey] = useState(0); // For forcing refresh
+  const [runtimeError, setRuntimeError] = useState(null);
+  const iframeRef = useRef(null);
 
-  // Defensively strip out hallucinated styling libraries and inject 'Self-Healing' mocks
-  const sanitizedCode = (() => {
-    // 1. Remove bad imports
-    const lines = code.split('\n').filter(line => {
-      if (!line.trim().startsWith('import ')) return true;
-      const allowed = [
-        /'react'/, /"react"/, 
-        /'lucide-react'/, /"lucide-react"/, 
-        /'framer-motion'/, /"framer-motion"/,
-        /'clsx'/, /"clsx"/,
-        /'tailwind-merge'/, /"tailwind-merge"/,
-        /'\.\/lib\/supabase'/, /"\.\/lib\/supabase"/, 
-        /'\.\/lib\/firebase'/, /"\.\/lib\/firebase"/, 
-        /'firebase\/auth'/, /"firebase\/auth"/
-      ];
-      return allowed.some(pattern => pattern.test(line));
+  // Sanitize and prepare code for Babel
+  const processedCode = useMemo(() => {
+    if (!code) return '';
+    
+    // Remove markdown code blocks if present
+    let cleaned = code.replace(/^```(?:jsx|js|javascript)?\n/i, '').replace(/\n```$/i, '');
+    
+    // 1. Strip React imports - we provide React globals in the iframe scope
+    const reactImportRegex = /^import\s+[\s\S]*?from\s+['"]react['"];?/gm;
+    cleaned = cleaned.replace(reactImportRegex, '');
+
+    // 2. Remove dangerous/hallucinated local imports safely
+    // BUT convert lucide-react imports to use our internal mock
+    const lucideImportRegex = /import\s+{([\s\S]*?)}\s+from\s+['"]lucide-react['"];?/g;
+    cleaned = cleaned.replace(lucideImportRegex, (match, p1) => {
+      return `const {${p1}} = LucideReact;`;
     });
 
-    // 2. Inject fallback mocks for commonly hallucinated components to prevent 'ReferenceError'
-    const componentsToMock = [
-      'Card',
-      'CardHeader',
-      'CardTitle',
-      'CardContent',
-      'CardFooter',
-      'CardBody',
-      'Button',
-      'Text',
-      'Heading',
-      'Container',
-      'Section',
-      'Row',
-      'Col',
-      'Input',
-      'Label',
-      'Icon',
-    ];
+    // Strip other imports
+    const badImportRegex = /^import\s+[\s\S]*?\s+from\s+['"](?:@\/components|\.\/components|\.\/ui|@\/ui|shadcn|@radix|@mui|antd|chakra|.*\.css)['"][^;]*;?/gm;
+    cleaned = cleaned.replace(badImportRegex, '');
 
-    const mocks = componentsToMock
-      .filter(comp => {
-        const isDefined = code.includes(`const ${comp}`)
-          || code.includes(`function ${comp}`)
-          || code.includes(`let ${comp}`)
-          || code.includes(`class ${comp}`);
-        return !isDefined;
-      })
-      .map(comp => {
-        if (comp === 'Button') return `const ${comp} = (props) => <button {...props} />;`;
-        if (comp === 'Input') return `const ${comp} = (props) => <input {...props} />;`;
-        if (comp === 'Label') return `const ${comp} = (props) => <label {...props} />;`;
-        if (comp === 'Text') return `const ${comp} = (props) => <span {...props} />;`;
-        if (comp === 'Heading' || comp === 'CardTitle') return `const ${comp} = (props) => <h3 {...props} />;`;
-        if (comp === 'Section') return `const ${comp} = (props) => <section {...props} />;`;
-        return `const ${comp} = (props) => <div {...props} />;`;
-      })
-      .join('\n');
-
-    // Insert mocks after imports
-    let lastImportIndex = -1;
-    lines.forEach((line, i) => {
-      if (line.trim().startsWith('import ')) lastImportIndex = i;
-    });
-
-    if (mocks) {
-      lines.splice(lastImportIndex + 1, 0, `/* Injected Mocks */\n${mocks}`);
-    }
-    const result = lines.join('\n');
-    return result;
-  })();
-
-  const files = {
-    '/index.js': {
-      code: `import React from 'react';
-import { createRoot } from 'react-dom/client';
-import App from './App';
-import './styles.css';
-
-console.log('Index.js loaded, rendering App...');
-const root = createRoot(document.getElementById('root'));
-root.render(
-  <React.StrictMode>
-    <div className="min-h-screen w-full flex flex-col bg-white">
-      <App />
-    </div>
-  </React.StrictMode>
-);`,
-      hidden: true,
-    },
-    '/App.js': {
-      code: sanitizedCode,
-      active: true,
-    },
-    '/index.html': {
-      code: `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>UI Preview</title>
-    <script>
-      tailwind = {
-        theme: {
-          extend: {
-            colors: {
-              brand: {
-                50: '#fef2f2',
-                100: '#fee2e2',
-                200: '#fecaca',
-                300: '#fca5a5',
-                400: '#f87171',
-                500: '#ef4444',
-                600: '#dc2626',
-                700: '#b91c1c',
-                800: '#991b1b',
-                900: '#7f1d1d'
-              }
-            }
-          }
-        }
+    // 3. Define Fallback Mocks for common hallucinated components
+    const componentMocks = `
+      const Card = ({ children, className = '', ...props }) => (
+        <div className={\`bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden \${className}\`} {...props}>{children}</div>
+      );
+      const CardHeader = ({ children, className = '', ...props }) => (
+        <div className={\`px-6 py-4 border-b border-gray-100 \${className}\`} {...props}>{children}</div>
+      );
+      const CardTitle = ({ children, className = '', ...props }) => (
+        <h3 className={\`text-lg font-semibold text-gray-900 \${className}\`} {...props}>{children}</h3>
+      );
+      const CardContent = ({ children, className = '', ...props }) => (
+        <div className={\`p-6 \${className}\`} {...props}>{children}</div>
+      );
+      const CardFooter = ({ children, className = '', ...props }) => (
+        <div className={\`px-6 py-4 border-t border-gray-100 bg-gray-50/50 \${className}\`} {...props}>{children}</div>
+      );
+      const Button = ({ children, className = '', variant = 'primary', ...props }) => {
+        const variants = {
+          primary: 'bg-blue-600 text-white hover:bg-blue-700',
+          secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
+          outline: 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+        };
+        return (
+          <button className={\`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 \${variants[variant] || variants.primary} \${className}\`} {...props}>
+            {children}
+          </button>
+        );
       };
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/index.js"></script>
-  </body>
-</html>
-`,
-      hidden: true,
-    },
-    '/styles.css': {
-      code: `
-html, body, #root {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
-  font-family: sans-serif;
-  background-color: white;
-}
-`,
-      hidden: true,
-    },
-    '/tailwind.config.js': {
-      code: `module.exports = { content: ['./**/*.{js,jsx}'], theme: { extend: {} }, plugins: [] }`,
-      hidden: true,
-    },
-  };
+      const Input = ({ className = '', ...props }) => (
+        <input className={\`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all \${className}\`} {...props} />
+      );
+      const Badge = ({ children, className = '', ...props }) => (
+        <span className={\`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 \${className}\`} {...props}>{children}</span>
+      );
+    `;
+
+    return `
+      ${componentMocks}
+      ${cleaned}
+      
+      // Auto-render logic: find the default export and render it
+      try {
+        const App = typeof Preview !== 'undefined' ? Preview : 
+                    typeof App !== 'undefined' ? App : 
+                    exportDefault; // Fallback for some AI outputs
+        
+        const rootElement = document.getElementById('root');
+        if (rootElement) {
+          const root = ReactDOM.createRoot(rootElement);
+          root.render(React.createElement(App || (() => <div className="p-8 text-center text-gray-500">No default export found.</div>)));
+        }
+      } catch (err) {
+        console.error("Render error:", err);
+        window.parent.postMessage({ type: 'error', message: err.message }, '*');
+      }
+    `;
+  }, [code]);
+
+  // Construct the Iframe HTML
+  const srcDoc = useMemo(() => {
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          
+          <!-- Tailwind CSS -->
+          <script src="https://cdn.tailwindcss.com"></script>
+          
+          <!-- Babel Standalone for JSX transpilation -->
+          <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+          
+          <!-- React & ReactDOM -->
+          <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+          <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+          
+          <!-- Mocking Lucide React -->
+          <script>
+            // Simple mock for Lucide React components
+            // In a real app, you might want to use the Lucide CDN properly
+            window.Lucide = {
+              createIcons: () => {},
+              // Proxy to catch any icon names the AI might use
+            };
+            
+            // Create a Proxy that returns a basic SVG for any Lucide component access
+            const LucideProxy = new Proxy({}, {
+              get: (target, name) => {
+                return (props) => {
+                  const size = props.size || props.height || 24;
+                  return React.createElement('svg', {
+                    width: size,
+                    height: size,
+                    viewBox: '0 0 24 24',
+                    fill: 'none',
+                    stroke: 'currentColor',
+                    strokeWidth: 2,
+                    strokeLinecap: 'round',
+                    strokeLinejoin: 'round',
+                    className: props.className,
+                    ...props
+                  }, React.createElement('circle', { cx: 12, cy: 12, r: 10 }));
+                }
+              }
+            });
+            window.LucideReact = LucideProxy;
+          </script>
+
+          <style>
+            body { margin: 0; padding: 0; background: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+            #root { min-height: 100vh; }
+          </style>
+        </head>
+        <body>
+          <div id="root"></div>
+          <script type="text/babel">
+            // Expose components to the script's scope
+            const { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } = React;
+            
+            // Re-map common export patterns
+            let exportDefault = null;
+            
+            ${processedCode.replace(/export default/g, 'exportDefault =')}
+          </script>
+        </body>
+      </html>
+    `;
+  }, [processedCode]);
+
+  // Handle messages from the iframe (e.g. errors)
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data.type === 'error') {
+        setRuntimeError(event.data.message);
+        if (onError) onError(event.data.message);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [onError]);
+
+  // Clear runtime error when code changes
+  useEffect(() => {
+    setRuntimeError(null);
+  }, [code]);
 
   return (
     <div className="absolute inset-0 flex flex-col bg-[color:var(--panel-strong)] overflow-hidden">
@@ -258,18 +221,19 @@ html, body, #root {
               <span>Generating...</span>
             </div>
           )}
+          <button 
+            onClick={() => setIframeKey(k => k + 1)}
+            className="p-1.5 text-[color:var(--muted)] hover:text-[color:var(--ink)] transition-colors"
+            title="Refresh Preview"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
+          </button>
           <ExportButton code={code} disabled={isGenerating} />
-          <div className="flex gap-1.5 ml-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500/80"></span>
-            <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></span>
-            <span className="w-2.5 h-2.5 rounded-full bg-green-500/80"></span>
-          </div>
         </div>
       </div>
 
-      {/* Sandpack */}
-      <div className="flex-1 w-full h-full min-h-0 relative bg-white">
-        {/* Generating overlay */}
+      {/* Main Area */}
+      <div className="flex-1 relative bg-white overflow-hidden">
         {isGenerating && (
           <div className="absolute inset-0 z-20 bg-[color:var(--panel-strong)]/80 backdrop-blur-sm flex items-center justify-center">
             <div className="bg-[color:var(--panel-strong)] border border-[color:var(--border)] rounded-2xl p-6 text-center shadow-2xl">
@@ -281,62 +245,33 @@ html, body, #root {
           </div>
         )}
 
-        <SandpackProvider
-          key={code} // Re-mount when code changes for clean state
-          files={files}
-          theme={atomDark}
-          template="react"
-          customSetup={{
-            dependencies: {
-              'lucide-react': 'latest',
-              'framer-motion': 'latest',
-              'clsx': 'latest',
-              'tailwind-merge': 'latest',
-              'tailwindcss': 'latest'
-            },
-            entry: '/index.js',
-          }}
-          options={{
-            externalResources: [
-              'https://cdn.tailwindcss.com',
-            ],
-            initMode: 'immediate',
-            recompileMode: 'immediate',
-          }}
-        >
-          <ErrorReporter onError={onError} isGenerating={isGenerating} />
-          <SandpackLayout
-            style={{
-              height: '100%',
-              width: '100%',
-              border: 'none',
-              borderRadius: 0,
-            }}
-          >
-            <div className={`flex-1 relative w-full h-full bg-white ${activeTab !== 'preview' ? 'hidden' : ''}`}>
-              <PreviewErrorBoundary resetKey={code}>
-                <SandpackPreview
-                  style={{ height: '100%', width: '100%' }}
-                  showNavigator={false}
-                  showRefreshButton={true}
-                />
-              </PreviewErrorBoundary>
-              <ErrorOverlay />
-            </div>
-            
-            <div className={`flex-1 min-h-0 w-full overflow-auto bg-[#151515] ${activeTab !== 'code' ? 'hidden' : ''}`}>
-              <SandpackCodeEditor
-                style={{ height: 'auto', minHeight: '100%' }}
-                showTabs={false}
-                showLineNumbers={true}
-                showInlineErrors={true}
-                wrapContent={false}
-                readOnly={false}
-                closableTabs={false}
-              />
-            </div>
-          </SandpackLayout>
-        </SandpackProvider>
+        {activeTab === 'preview' ? (
+          <div className="w-full h-full flex flex-col">
+            {runtimeError && (
+              <div className="p-4 bg-red-50 border-b border-red-100 flex items-start gap-2 text-red-700">
+                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold">Preview Error</p>
+                  <p className="text-xs font-mono mt-1">{runtimeError}</p>
+                </div>
+              </div>
+            )}
+            <iframe
+              key={iframeKey}
+              ref={iframeRef}
+              srcDoc={srcDoc}
+              className="w-full h-full border-none bg-white"
+              sandbox="allow-scripts allow-modals"
+              title="Preview"
+            />
+          </div>
+        ) : (
+          <div className="w-full h-full bg-[#151515] overflow-auto p-4">
+            <pre className="text-sm font-mono text-gray-300 whitespace-pre-wrap leading-relaxed">
+              {code}
+            </pre>
+          </div>
+        )}
       </div>
     </div>
   );
