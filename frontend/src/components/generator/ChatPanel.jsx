@@ -5,10 +5,14 @@ function MessageBubble({ message }) {
   const [copied, setCopied] = useState(false);
   const isUser = message.role === 'user';
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(message.code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard access denied — silently ignore
+    }
   };
 
   return (
@@ -79,25 +83,7 @@ export default function ChatPanel({
   ];
 
   return (
-    <div className="flex flex-col h-full bg-[color:var(--panel-strong)]">
-      <div className="flex items-center justify-between px-3 sm:px-4 py-3 bg-[color:var(--panel-strong)] border-b border-[color:var(--border)] flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="bg-[color:var(--accent)]/15 p-1 rounded-md">
-            <Sparkles className="w-3.5 h-3.5 text-[color:var(--accent)]" />
-          </div>
-          <span className="text-sm font-semibold text-[color:var(--ink)]">AI Generator</span>
-        </div>
-        {messages.length > 0 && (
-          <button
-            onClick={onReset}
-            className="flex items-center gap-1.5 text-xs text-[color:var(--muted)] hover:text-[color:var(--ink)] transition-colors p-1.5 hover:bg-[color:var(--panel)] rounded-md"
-            title="New session"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            New
-          </button>
-        )}
-      </div>
+    <div className="flex flex-col h-full bg-transparent max-w-3xl mx-auto w-full">
 
       <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
         {messages.length === 0 ? (
@@ -143,29 +129,31 @@ export default function ChatPanel({
       </div>
 
       {showInput && (
-        <div className="p-3 bg-[color:var(--panel-strong)] border-t border-[color:var(--border)] flex-shrink-0">
-          <form onSubmit={handleSubmit} className="flex items-end gap-2">
+        <div className="p-4 bg-transparent flex-shrink-0 w-full max-w-3xl mx-auto relative mb-4">
+          <form onSubmit={handleSubmit} className="relative bg-[color:var(--panel-strong)] border border-[color:var(--border)] rounded-2xl p-2 shadow-sm focus-within:ring-1 focus-within:ring-[color:var(--muted)]">
             <textarea
               ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={messages.length > 0 ? "Refine the UI..." : "Describe a UI component..."}
-              rows={2}
-              className="flex-1 resize-none text-sm px-3 py-2.5 border border-[color:var(--border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)] focus:border-transparent transition-all placeholder-[color:var(--muted)] bg-[color:var(--panel)]"
+              placeholder="Message..."
+              rows={1}
+              className="w-full bg-transparent text-[color:var(--ink)] placeholder-[color:var(--muted)] resize-none outline-none min-h-[44px] max-h-[200px] py-2.5 px-3 overflow-y-auto"
               disabled={isGenerating}
             />
-            <button
-              type="submit"
-              disabled={!input.trim() || isGenerating}
-              className="flex-shrink-0 w-9 h-9 flex items-center justify-center bg-[color:var(--accent)] hover:bg-[color:var(--accent-3)] text-[color:var(--ink)] rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-            >
-              {isGenerating ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-            </button>
+            <div className="absolute right-2 bottom-2">
+              <button
+                type="submit"
+                disabled={!input.trim() || isGenerating}
+                className="p-1.5 bg-[color:var(--ink)] text-[color:var(--bg)] hover:opacity-90 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {isGenerating ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </button>
+            </div>
           </form>
         </div>
       )}

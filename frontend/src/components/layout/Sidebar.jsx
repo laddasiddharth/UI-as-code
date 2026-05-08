@@ -1,71 +1,126 @@
-import React from 'react';
-import { Home, Layers, Settings, FileCode2, History, MessageSquareCode, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Settings, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
-const NavItem = ({ icon: Icon, label, active, onClick }) => (
-  <button 
-    onClick={onClick}
-    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium transition-all duration-200 ${
-      active 
-        ? 'bg-[color:var(--accent)]/15 text-[color:var(--accent)] shadow-[0_0_0_1px_rgba(126,231,135,0.2)]' 
-        : 'text-[color:var(--muted)] hover:bg-white/5 hover:text-[color:var(--ink)]'
-    }`}
-  >
-    <Icon className={`w-5 h-5 ${active ? 'text-[color:var(--accent)]' : 'text-[color:var(--muted)]'}`} />
-    {label}
-  </button>
-);
+const SESSION_TABLE = 'chat_sessions';
 
 const CURRENT_SESSION_KEY = 'atelierui.currentSessionId';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+  const [sessions, setSessions] = useState([]);
+
+  React.useEffect(() => {
+    if (!user) {
+      setSessions([]);
+      return;
+    }
+
+    let isMounted = true;
+    const loadSessions = async () => {
+      const { data, error } = await supabase
+        .from(SESSION_TABLE)
+        .select('id, title, updated_at')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(20);
+
+      if (isMounted && !error && data) {
+        setSessions(data);
+      }
+    };
+
+    loadSessions();
+
+    const channel = supabase
+      .channel('sidebar-sessions')
+      .on('postgres_changes', { event: '*', schema: 'public', table: SESSION_TABLE, filter: `user_id=eq.${user.id}` }, loadSessions)
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  const handleNewChat = () => {
+    localStorage.removeItem(CURRENT_SESSION_KEY);
+    navigate('/?new=1');
+    onClose();
+  };
+
   return (
     <>
       {/* Mobile backdrop */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-gray-900/50 z-20 lg:hidden backdrop-blur-sm"
+          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
           onClick={onClose}
         />
       )}
       
       {/* Sidebar container */}
       <aside 
-        className={`fixed lg:static inset-y-0 left-0 w-72 sm:w-80 lg:w-[272px] max-w-[80vw] z-30 transform transition-transform duration-300 ease-in-out flex flex-col ${
+        className={`fixed lg:static inset-y-0 left-0 w-[260px] bg-[color:var(--panel-strong)] z-30 transform transition-transform duration-300 ease-in-out flex flex-col h-full ${
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="floating-card py-6 px-4 space-y-8 rounded-[28px] border border-white/10 lg:mx-4 lg:my-6">
-          
-          <div className="space-y-2">
-            <h3 className="px-3 text-[0.65rem] font-semibold text-[color:var(--muted)] uppercase tracking-[0.25em] mb-2">Workspace</h3>
-            <NavItem icon={Home} label="Dashboard" active={location.pathname === '/'} onClick={() => { navigate('/'); onClose(); }} />
-            <NavItem
-              icon={Sparkles}
-              label="Generate"
-              active={location.pathname === '/generate'}
-              onClick={() => {
-                localStorage.removeItem(CURRENT_SESSION_KEY);
-                navigate('/generate?new=1');
-                onClose();
-              }}
-            />
-            <NavItem icon={Layers} label="Projects" active={location.pathname === '/projects'} onClick={() => { navigate('/projects'); onClose(); }} />
-            <NavItem icon={MessageSquareCode} label="Generations" active={location.pathname === '/generations'} onClick={() => { navigate('/generations'); onClose(); }} />
+        <div className="flex flex-col h-full p-3 gap-2">
+          {/* Top Section */}
+          <button 
+            onClick={handleNewChat}
+            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[color:var(--panel)] text-[color:var(--ink)] transition-colors w-full text-sm font-medium"
+          >
+            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-[color:var(--ink)] text-[color:var(--bg)]">
+              <Plus className="w-4 h-4" />
+            </div>
+            New chat
+          </button>
+
+          {/* History / Middle Section */}
+          <div className="flex-1 overflow-y-auto mt-4 px-2">
+            <div className="text-xs font-medium text-[color:var(--muted)] mb-2 px-2">Recent Chats</div>
+            
+            {sessions.map(session => (
+              <button 
+                key={session.id}
+                onClick={() => { 
+                  localStorage.setItem(CURRENT_SESSION_KEY, session.id);
+                  navigate(`/?session=${session.id}`); 
+                  onClose(); 
+                }}
+                className={`flex items-center gap-2 w-full px-2 py-2 rounded-lg text-sm transition-colors text-left truncate ${
+                  new URLSearchParams(location.search).get('session') === session.id
+                    ? 'bg-[color:var(--panel)] text-[color:var(--ink)]'
+                    : 'text-[color:var(--muted)] hover:bg-[color:var(--panel)] hover:text-[color:var(--ink)]'
+                }`}
+              >
+                <span className="truncate">{session.title || 'Untitled chat'}</span>
+              </button>
+            ))}
+
+
           </div>
 
-          <div className="space-y-2">
-            <h3 className="px-3 text-[0.65rem] font-semibold text-[color:var(--muted)] uppercase tracking-[0.25em] mb-2">Assets</h3>
-            <NavItem icon={FileCode2} label="Components" active={location.pathname === '/components'} onClick={() => { navigate('/components'); onClose(); }} />
-            <NavItem
-              icon={History}
-              label="History"
-              active={location.pathname === '/history'}
-              onClick={() => { navigate('/history'); onClose(); }}
-            />
-            <NavItem icon={Settings} label="Settings" active={location.pathname === '/settings'} onClick={() => { navigate('/settings'); onClose(); }} />
+          {/* Bottom Section */}
+          <div className="pt-2 border-t border-[color:var(--border)] mt-auto flex flex-col gap-1">
+            <button 
+              onClick={() => { navigate('/settings'); onClose(); }}
+              className="flex items-center gap-2 w-full px-2 py-2 rounded-lg hover:bg-[color:var(--panel)] text-[color:var(--ink)] text-sm transition-colors"
+            >
+              <Settings className="w-4 h-4 text-[color:var(--muted)]" />
+              Settings
+            </button>
+            <div className="flex items-center gap-2 w-full px-2 py-2 rounded-lg hover:bg-[color:var(--panel)] text-[color:var(--ink)] text-sm transition-colors cursor-pointer">
+              <div className="w-7 h-7 rounded-full bg-[color:var(--panel)] flex items-center justify-center flex-shrink-0">
+                <User className="w-4 h-4 text-[color:var(--muted)]" />
+              </div>
+              <span className="truncate font-medium">User Account</span>
+            </div>
           </div>
         </div>
       </aside>

@@ -39,14 +39,35 @@ export const generateComponentCode = async (userPrompt, history = [], existingCo
       { role: "user", content: finalPrompt }
     ];
 
-    const completion = await openai.chat.completions.create({
-      model: "openrouter/auto:free",
-      messages: messages,
-      temperature: 0.2,
-    });
+    const modelCandidates = [
+      process.env.OPENROUTER_MODEL,
+      "meta-llama/llama-3.3-8b-instruct:free",
+      "openrouter/auto:free",
+      "openrouter/auto"
+    ].filter(Boolean);
 
-    const raw = completion.choices[0].message.content;
-    return extractCode(raw);
+    let lastError = null;
+    for (const model of modelCandidates) {
+      try {
+        const completion = await openai.chat.completions.create({
+          model,
+          messages: messages,
+          temperature: 0.2,
+        });
+        const raw = completion.choices[0].message.content;
+        return extractCode(raw);
+      } catch (err) {
+        const shouldFallback =
+          err?.status === 404 ||
+          String(err?.message || '').includes('No endpoints found');
+        if (!shouldFallback) {
+          throw err;
+        }
+        lastError = err;
+      }
+    }
+
+    throw lastError || new Error("No available OpenRouter model endpoints found.");
   } catch (error) {
     console.error("Error generating code with OpenRouter:", error);
     throw new Error("Failed to generate UI code.");

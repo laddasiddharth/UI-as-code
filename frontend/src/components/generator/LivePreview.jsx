@@ -31,34 +31,51 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
   const processedCode = useMemo(() => {
     if (!localCode) return '';
     
-    let cleaned = localCode.replace(/^```(?:jsx|js|javascript)?\n/i, '').replace(/\n```$/i, '');
+    let cleaned = localCode;
+    const codeBlockMatch = localCode.match(/```(?:jsx|js|javascript|tsx|ts)?\s*\n([\s\S]*?)```/i);
+    if (codeBlockMatch) {
+      cleaned = codeBlockMatch[1];
+    } else {
+      // Fallback if no code block, just trim
+      cleaned = localCode.trim();
+    }
     
-    const reactImportRegex = /^import\s+[\s\S]*?from\s+['"]react['"];?/gm;
-    cleaned = cleaned.replace(reactImportRegex, '');
+    // First, process specific imports we want to mock
+    const lucideImportRegex = /import\s*\{([^}]*)\}\s*from\s*['"]lucide-react['"];?/gm;
+    cleaned = cleaned.replace(lucideImportRegex, (match, p1) => `var {${p1}} = LucideReact;`);
 
-    const lucideImportRegex = /import\s+{([\s\S]*?)}\s+from\s+['"]lucide-react['"];?/g;
-    cleaned = cleaned.replace(lucideImportRegex, (match, p1) => `const {${p1}} = LucideReact;`);
+    const rechartsImportRegex = /import\s*\{([^}]*)\}\s*from\s*['"]recharts['"];?/gm;
+    cleaned = cleaned.replace(rechartsImportRegex, (match, p1) => `var {${p1}} = RechartsMock;`);
 
-    const badImportRegex = /^import\s+[\s\S]*?\s+from\s+['"](?:@\/components|\.\/components|\.\/ui|@\/ui|shadcn|@radix|@mui|antd|chakra|.*\.css)['"][^;]*;?/gm;
-    cleaned = cleaned.replace(badImportRegex, '');
+    // Remove ALL remaining import statements safely
+    cleaned = cleaned.replace(/import\s+[^'"]+['"][^'"]+['"]\s*;?/g, '');
+    
+    // Also handle default imports without brackets, e.g. import React from 'react';
+    cleaned = cleaned.replace(/import\s+[a-zA-Z0-9_]+\s+from\s+['"][^'"]+['"]\s*;?/g, '');
+    
+    // Remove any empty export statements
+    cleaned = cleaned.replace(/export\s+\{\s*\}\s*;/g, '');
+
+    // Guard against dangling remnants like: "} from 'recharts';"
+    cleaned = cleaned.replace(/^\s*}\s*from\s*['"][^'"]+['"];?\s*$/gm, '');
 
     const componentMocks = `
-      const Card = ({ children, className = '', ...props }) => (
+      var Card = ({ children, className = '', ...props }) => (
         <div className={\`bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden \${className}\`} {...props}>{children}</div>
       );
-      const CardHeader = ({ children, className = '', ...props }) => (
+      var CardHeader = ({ children, className = '', ...props }) => (
         <div className={\`px-6 py-4 border-b border-gray-100 \${className}\`} {...props}>{children}</div>
       );
-      const CardTitle = ({ children, className = '', ...props }) => (
+      var CardTitle = ({ children, className = '', ...props }) => (
         <h3 className={\`text-lg font-semibold text-gray-900 \${className}\`} {...props}>{children}</h3>
       );
-      const CardContent = ({ children, className = '', ...props }) => (
+      var CardContent = ({ children, className = '', ...props }) => (
         <div className={\`p-6 \${className}\`} {...props}>{children}</div>
       );
-      const CardFooter = ({ children, className = '', ...props }) => (
+      var CardFooter = ({ children, className = '', ...props }) => (
         <div className={\`px-6 py-4 border-t border-gray-100 bg-gray-50/50 \${className}\`} {...props}>{children}</div>
       );
-      const Button = ({ children, className = '', variant = 'primary', ...props }) => {
+      var Button = ({ children, className = '', variant = 'primary', ...props }) => {
         const variants = {
           primary: 'bg-blue-600 text-white hover:bg-blue-700',
           secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
@@ -70,12 +87,99 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
           </button>
         );
       };
-      const Input = ({ className = '', ...props }) => (
+      var Input = ({ className = '', ...props }) => (
         <input className={\`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all \${className}\`} {...props} />
       );
-      const Badge = ({ children, className = '', ...props }) => (
+      var Badge = ({ children, className = '', ...props }) => (
         <span className={\`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 \${className}\`} {...props}>{children}</span>
       );
+      var ResponsiveContainer = ({ children, width = '100%', height = 260, ...props }) => (
+        <div style={{ width, height }} {...props}>{children}</div>
+      );
+      var RechartsSvg = ({ children, ...props }) => (
+        <svg viewBox="0 0 800 260" width="100%" height="100%" preserveAspectRatio="none" {...props}>
+          <rect x="0" y="0" width="800" height="260" fill="transparent" />
+          {children}
+        </svg>
+      );
+      var ChartContainer = ({ children, className = '', ...props }) => (
+        <div className={\`w-full h-full rounded-xl border border-gray-200 bg-white/80 \${className}\`} {...props}>
+          <RechartsSvg>{children}</RechartsSvg>
+        </div>
+      );
+      var CartesianGrid = () => null;
+      var XAxis = () => null;
+      var YAxis = () => null;
+      var Tooltip = () => null;
+      var Legend = () => null;
+      var BarChart = ({ children, ...props }) => <ChartContainer {...props}>{children}</ChartContainer>;
+      var LineChart = ({ children, ...props }) => <ChartContainer {...props}>{children}</ChartContainer>;
+      var AreaChart = ({ children, ...props }) => <ChartContainer {...props}>{children}</ChartContainer>;
+      var PieChart = ({ children, ...props }) => <ChartContainer {...props}>{children}</ChartContainer>;
+      var ComposedChart = ({ children, ...props }) => <ChartContainer {...props}>{children}</ChartContainer>;
+      var RadarChart = ({ children, ...props }) => <ChartContainer {...props}>{children}</ChartContainer>;
+      var RadialBarChart = ({ children, ...props }) => <ChartContainer {...props}>{children}</ChartContainer>;
+      var ScatterChart = ({ children, ...props }) => <ChartContainer {...props}>{children}</ChartContainer>;
+      var FunnelChart = ({ children, ...props }) => <ChartContainer {...props}>{children}</ChartContainer>;
+      var Treemap = ({ children, ...props }) => <ChartContainer {...props}>{children}</ChartContainer>;
+      var Sankey = ({ children, ...props }) => <ChartContainer {...props}>{children}</ChartContainer>;
+      var Bar = () => null;
+      var Line = () => null;
+      var Area = () => null;
+      var Pie = () => null;
+      var Cell = () => null;
+      var Scatter = () => null;
+      var Radar = () => null;
+      var RadialBar = () => null;
+      var Funnel = () => null;
+      var Label = () => null;
+      var LabelList = () => null;
+      var Brush = () => null;
+      var ReferenceLine = () => null;
+      var ReferenceArea = () => null;
+      var ReferenceDot = () => null;
+      var ErrorBar = () => null;
+      var PolarGrid = () => null;
+      var PolarAngleAxis = () => null;
+      var PolarRadiusAxis = () => null;
+      var RechartsMock = {
+        ResponsiveContainer,
+        CartesianGrid,
+        XAxis,
+        YAxis,
+        Tooltip,
+        Legend,
+        BarChart,
+        LineChart,
+        AreaChart,
+        PieChart,
+        ComposedChart,
+        RadarChart,
+        RadialBarChart,
+        ScatterChart,
+        FunnelChart,
+        Treemap,
+        Sankey,
+        Bar,
+        Line,
+        Area,
+        Pie,
+        Cell,
+        Scatter,
+        Radar,
+        RadialBar,
+        Funnel,
+        Label,
+        LabelList,
+        Brush,
+        ReferenceLine,
+        ReferenceArea,
+        ReferenceDot,
+        ErrorBar,
+        PolarGrid,
+        PolarAngleAxis,
+        PolarRadiusAxis
+      };
     `;
 
     return `
@@ -83,14 +187,27 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
       ${cleaned}
       
       try {
-        const App = typeof Preview !== 'undefined' ? Preview : 
-                    typeof App !== 'undefined' ? App : 
-                    exportDefault;
+        let RootComponent = null;
+        if (typeof exportDefault !== 'undefined' && exportDefault) RootComponent = exportDefault;
+        else if (typeof Preview !== 'undefined') RootComponent = Preview;
+        else if (typeof window.App !== 'undefined') RootComponent = window.App;
+        else if (typeof window.Main !== 'undefined') RootComponent = window.Main;
+        else if (typeof window.Component !== 'undefined') RootComponent = window.Component;
+        else if (typeof window.Dashboard !== 'undefined') RootComponent = window.Dashboard;
+        else if (typeof window.Example !== 'undefined') RootComponent = window.Example;
         
+        // If we still don't have a RootComponent, try to find any React component in the global scope
+        if (!RootComponent) {
+          const possibleComponents = Object.entries(window)
+            .filter(([key, val]) => typeof val === 'function' && /^[A-Z]/.test(key) && key !== 'LucideProxy' && key !== 'RechartsMock')
+            .map(([_, val]) => val);
+          if (possibleComponents.length > 0) RootComponent = possibleComponents[0];
+        }
+
         const rootElement = document.getElementById('root');
         if (rootElement) {
           const root = ReactDOM.createRoot(rootElement);
-          root.render(React.createElement(App || (() => <div className="p-8 text-center text-gray-500">No default export found.</div>)));
+          root.render(React.createElement(RootComponent || (() => <div className="p-8 text-center text-gray-500">No component found to render. Please ensure you export a default component.</div>)));
         }
       } catch (err) {
         console.error("Render error:", err);
@@ -135,7 +252,11 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
           <script type="text/babel">
             const { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } = React;
             let exportDefault = null;
-            ${processedCode.replace(/export default/g, 'exportDefault =')}
+            ${processedCode
+              .replace(/export\s+default\s+/g, 'exportDefault = ')
+              .replace(/export\s+(const|let|var|function|class)\s+/g, '$1 ')
+              .replace(/export\s+\{[^}]+\}\s*;/g, '')
+            }
           </script>
         </body>
       </html>
@@ -242,7 +363,7 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
                 </div>
               </div>
             )}
-            <iframe key={iframeKey} ref={iframeRef} srcDoc={srcDoc} className="w-full h-full border-none bg-white" sandbox="allow-scripts allow-modals" title="Preview" />
+            <iframe key={iframeKey} ref={iframeRef} srcDoc={srcDoc} className="w-full h-full border-none bg-white" sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin" title="Preview" />
           </div>
         ) : (
           <div className="w-full h-full bg-[#0d1117] flex flex-col">

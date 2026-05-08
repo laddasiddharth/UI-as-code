@@ -3,6 +3,7 @@ import ChatPanel from '../../components/generator/ChatPanel';
 import LivePreview from '../../components/generator/LivePreview';
 import { useGeneration } from '../../hooks/useGeneration';
 import { useSearchParams } from 'react-router-dom';
+import { Sparkles, Loader2, Send } from 'lucide-react';
 
 const CURRENT_SESSION_KEY = 'atelierui.currentSessionId';
 
@@ -15,25 +16,64 @@ export default function GeneratorPage() {
     localStorage.setItem(CURRENT_SESSION_KEY, sessionParam);
   }
 
-  const { code, setCode, messages, isGenerating, generate, reset, repairFromError } = useGeneration();
+  const { code, setCode, messages, isGenerating, generate, reset, repairFromError } = useGeneration(sessionParam);
   const [chatVisible, setChatVisible] = useState(true);
   const [quickInput, setQuickInput] = useState('');
+  const [chatWidth, setChatWidth] = useState(40); // percentage
+  const [isResizing, setIsResizing] = useState(false);
+  const containerRef = React.useRef(null);
 
   const hasMessages = messages.length > 0;
-  const showChatPanel = hasMessages && chatVisible;
+  const showPreview = hasMessages && (code || isGenerating);
+
+  const startResizing = React.useCallback((e) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  const stopResizing = React.useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  const resize = React.useCallback((e) => {
+    if (isResizing && containerRef.current) {
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const relativeX = e.clientX - containerRect.left;
+      const newWidth = (relativeX / containerRect.width) * 100;
+      if (newWidth > 20 && newWidth < 80) {
+        setChatWidth(newWidth);
+      }
+    }
+  }, [isResizing]);
 
   useEffect(() => {
-    if (newParam) {
+    if (isResizing) {
+      window.addEventListener('mousemove', resize);
+      window.addEventListener('mouseup', stopResizing);
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'col-resize';
+    } else {
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    }
+    return () => {
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+  }, [isResizing, resize, stopResizing]);
+
+  useEffect(() => {
+    if (newParam === '1') {
       localStorage.removeItem(CURRENT_SESSION_KEY);
       reset();
+      // Remove the ?new=1 from URL without adding to history
       setSearchParams({}, { replace: true });
-      return;
     }
-
-    if (!sessionParam) {
-      reset();
-    }
-  }, [newParam, sessionParam, reset, setSearchParams]);
+  }, [newParam, reset, setSearchParams]);
 
   const handleQuickSubmit = (e) => {
     e.preventDefault();
@@ -42,66 +82,111 @@ export default function GeneratorPage() {
     setQuickInput('');
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleQuickSubmit(e);
+    }
+  };
+
   return (
-    <div className="generator-shell w-full bg-[color:var(--bg)] relative">
-      <div
-        className={`generator-chat border-b lg:border-b-0 lg:border-r border-white/10 transition-all duration-300 ease-in-out ${
-          showChatPanel ? 'lg:w-80' : 'h-0 lg:w-0'
-        }`}
+    <div 
+      ref={containerRef}
+      className={`flex h-full w-full bg-[color:var(--bg)] relative overflow-hidden ${isResizing ? 'select-none' : ''}`}
+    >
+      {/* Main Chat Area */}
+      <div 
+        className={`flex flex-col h-full ${!isResizing ? 'transition-[width,opacity] duration-300 ease-in-out' : ''} ${showPreview && chatVisible ? 'border-r border-[color:var(--border)]' : 'w-full'} ${!chatVisible && showPreview ? 'hidden lg:flex lg:w-0 lg:border-none' : ''}`}
+        style={{ width: showPreview && chatVisible ? `${chatWidth}%` : undefined }}
       >
-        <div className="w-full lg:w-80">
-          <ChatPanel
-            messages={messages}
-            isGenerating={isGenerating}
-            onGenerate={generate}
-            onReset={reset}
-            showInput={true}
-          />
-        </div>
+        
+        {!hasMessages ? (
+          /* Empty State */
+          <div className="flex-1 flex flex-col items-center justify-center p-4">
+            <h1 className="text-3xl font-semibold text-[color:var(--ink)] mb-8">What are you working on?</h1>
+            
+            <div className="w-full max-w-2xl relative">
+              <form onSubmit={handleQuickSubmit} className="relative bg-[color:var(--panel)] border border-[color:var(--border)] rounded-2xl p-2 shadow-sm focus-within:ring-1 focus-within:ring-[color:var(--muted)]">
+                <textarea
+                  value={quickInput}
+                  onChange={(e) => setQuickInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Describe the UI you want to build..."
+                  className="w-full bg-transparent text-[color:var(--ink)] placeholder-[color:var(--muted)] resize-none outline-none min-h-[56px] max-h-[200px] py-3 px-3 overflow-y-auto"
+                  rows={2}
+                  disabled={isGenerating}
+                />
+                <div className="flex justify-end mt-2">
+                  <button
+                    type="submit"
+                    disabled={!quickInput.trim() || isGenerating}
+                    className="p-2 bg-[color:var(--ink)] text-[color:var(--bg)] hover:opacity-90 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                  </button>
+                </div>
+              </form>
+              <div className="mt-6 flex flex-wrap justify-center gap-2">
+                {["A pricing card", "A responsive navigation bar", "A dark hero section", "A stats dashboard"].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => generate(suggestion)}
+                    className="px-4 py-2 text-sm text-[color:var(--muted)] border border-[color:var(--border)] rounded-full hover:bg-[color:var(--panel)] hover:text-[color:var(--ink)] transition-colors"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Active Chat State */
+          <div className="flex-1 overflow-hidden relative">
+            <ChatPanel
+              messages={messages}
+              isGenerating={isGenerating}
+              onGenerate={generate}
+              onReset={reset}
+              showInput={true}
+            />
+          </div>
+        )}
       </div>
 
-      <div className="flex-1 flex flex-col relative min-h-0">
-        <div className="flex-1 relative w-full min-h-[60vh]">
+      {/* Resize Handle */}
+      {showPreview && chatVisible && (
+        <div
+          onMouseDown={startResizing}
+          className="absolute top-0 bottom-0 w-1.5 cursor-col-resize z-50 group hover:bg-[color:var(--accent)]/50 transition-colors hidden lg:block"
+          style={{ left: `calc(${chatWidth}% - 3px)` }}
+        >
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-8 flex items-center justify-center bg-[color:var(--panel-strong)] border border-[color:var(--border)] rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex gap-0.5">
+              <div className="w-0.5 h-3 bg-[color:var(--muted)] rounded-full"></div>
+              <div className="w-0.5 h-3 bg-[color:var(--muted)] rounded-full"></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Area (Canvas) */}
+      <div 
+        className={`h-full ${!isResizing ? 'transition-[width,opacity] duration-300 ease-in-out' : ''} bg-[#0f1117] relative ${showPreview ? (chatVisible ? 'hidden lg:block' : 'w-full') : 'w-0 hidden'}`}
+        style={{ width: showPreview && chatVisible ? `${100 - chatWidth}%` : undefined }}
+      >
+        {isResizing && (
+          <div className="absolute inset-0 z-50 bg-transparent" />
+        )}
+        {showPreview && (
           <LivePreview
             code={code}
             isGenerating={isGenerating}
             onError={(errorMessage) => repairFromError(errorMessage, code)}
             onChatToggle={() => setChatVisible(!chatVisible)}
             chatVisible={chatVisible}
-            showChatToggle={hasMessages}
+            showChatToggle={true}
             onCodeChange={setCode}
           />
-        </div>
-
-        {!hasMessages && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[color:var(--bg)]/70 backdrop-blur-sm">
-            <div className="w-full max-w-2xl px-5 sm:px-6">
-              <div className="glass-panel rounded-[26px] p-5 sm:p-8">
-                <p className="text-xs uppercase tracking-[0.3em] text-[color:var(--muted)]">Launch</p>
-                <h2 className="font-display text-2xl sm:text-3xl text-[color:var(--ink)] mt-3">Start with a prompt</h2>
-                <p className="text-sm text-[color:var(--muted)] mt-2">
-                  Describe the UI you want to build, then keep iterating without losing the vibe.
-                </p>
-                <form onSubmit={handleQuickSubmit} className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
-                  <textarea
-                    value={quickInput}
-                    onChange={(e) => setQuickInput(e.target.value)}
-                    placeholder="E.g. A pricing page with three tiers and a bold CTA"
-                    rows={3}
-                    className="flex-1 resize-none text-sm px-3 py-2.5 border border-[color:var(--border)] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)] focus:border-transparent transition-all placeholder-[color:var(--muted)] bg-[color:var(--panel-strong)]"
-                    disabled={isGenerating}
-                  />
-                  <button
-                    type="submit"
-                    disabled={!quickInput.trim() || isGenerating}
-                    className="flex-shrink-0 h-12 px-5 bg-[color:var(--accent)] hover:bg-[color:var(--accent-3)] text-[color:var(--ink)] rounded-2xl disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                  >
-                    {isGenerating ? 'Generating...' : 'Generate'}
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
         )}
       </div>
     </div>

@@ -49,7 +49,7 @@ function buildFixPrompt(errorToFix, previousCode) {
   return `The previous code generated this error:\n"${errorToFix}"\n\nHere is the broken code:\n${previousCode}\n\nFix the error and return the corrected code only.`;
 }
 
-export function useGeneration() {
+export function useGeneration(externalSessionId = null) {
   const { user } = useAuth();
   const [sessionId, setSessionId] = useState(null);
   const [sessionCreatedAt, setSessionCreatedAt] = useState(null);
@@ -123,8 +123,8 @@ export function useGeneration() {
 
       const list = data || [];
 
-      const storedId = loadCurrentSessionId();
-      const preferred = list.find((session) => session.id === storedId) || list[0];
+      const storedId = externalSessionId || loadCurrentSessionId();
+      const preferred = list.find((session) => session.id === storedId);
 
       if (preferred) {
         setSessionId(preferred.id);
@@ -146,7 +146,7 @@ export function useGeneration() {
     return () => {
       isMounted = false;
     };
-  }, [user]);
+  }, [user, externalSessionId]);
 
   const generate = useCallback(async (prompt, baasTemplate = null) => {
     const nextSessionId = sessionId || createSessionId();

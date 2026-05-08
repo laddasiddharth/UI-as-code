@@ -31,7 +31,7 @@ export default function Login() {
         if (data?.session) {
           navigate('/');
         } else {
-          setError('Email confirmation is enabled in Supabase. Disable it to allow instant sign-in.');
+          setError('Account created! Please check your email to confirm your account before signing in.');
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
