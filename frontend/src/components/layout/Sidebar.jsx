@@ -16,6 +16,8 @@ const NavItem = ({ icon: Icon, label, active, onClick }) => (
   </button>
 );
 
+const CURRENT_SESSION_KEY = 'atelierui.currentSessionId';
+
 const Sidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -40,7 +42,16 @@ const Sidebar = ({ isOpen, onClose }) => {
           <div className="space-y-1">
             <h3 className="px-3 text-[0.65rem] font-semibold text-[color:var(--muted)] uppercase tracking-[0.25em] mb-2">Workspace</h3>
             <NavItem icon={Home} label="Dashboard" active={location.pathname === '/'} onClick={() => { navigate('/'); onClose(); }} />
-            <NavItem icon={Sparkles} label="Generate" active={location.pathname === '/generate'} onClick={() => { navigate('/generate'); onClose(); }} />
+            <NavItem
+              icon={Sparkles}
+              label="Generate"
+              active={location.pathname === '/generate'}
+              onClick={() => {
+                localStorage.removeItem(CURRENT_SESSION_KEY);
+                navigate('/generate?new=1');
+                onClose();
+              }}
+            />
             <NavItem icon={Layers} label="Projects" active={location.pathname === '/projects'} onClick={() => { navigate('/projects'); onClose(); }} />
             <NavItem icon={MessageSquareCode} label="Generations" active={location.pathname === '/generations'} onClick={() => { navigate('/generations'); onClose(); }} />
           </div>

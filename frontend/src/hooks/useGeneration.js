@@ -62,7 +62,13 @@ export function useGeneration() {
   const [autoFixCount, setAutoFixCount] = useState(0);
   const [lastAutoFixKey, setLastAutoFixKey] = useState('');
 
-  const syncSession = useCallback(async (nextSessionId, nextCreatedAt) => {
+  const upsertSession = useCallback(async ({
+    nextSessionId,
+    nextCreatedAt,
+    nextCode,
+    nextHistory,
+    nextMessages,
+  }) => {
     if (!nextSessionId || !user) return;
     const now = new Date().toISOString();
     const payload = {
@@ -70,10 +76,10 @@ export function useGeneration() {
       user_id: user.id,
       created_at: nextCreatedAt || now,
       updated_at: now,
-      title: buildSessionTitle(messages),
-      code,
-      history,
-      messages,
+      title: buildSessionTitle(nextMessages),
+      code: nextCode,
+      history: nextHistory,
+      messages: nextMessages,
     };
 
     const { error: upsertError } = await supabase
@@ -87,7 +93,7 @@ export function useGeneration() {
     }
 
     localStorage.setItem(CURRENT_SESSION_KEY, nextSessionId);
-  }, [code, history, messages, user]);
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -142,16 +148,12 @@ export function useGeneration() {
     };
   }, [user]);
 
-  useEffect(() => {
-    if (!user || !isHydrated || !sessionId) return;
-    syncSession(sessionId, sessionCreatedAt);
-  }, [user, isHydrated, sessionId, sessionCreatedAt, syncSession]);
-
   const generate = useCallback(async (prompt, baasTemplate = null) => {
+    const nextSessionId = sessionId || createSessionId();
+    const nextCreatedAt = sessionCreatedAt || new Date().toISOString();
     if (!sessionId) {
-      const newSessionId = createSessionId();
-      setSessionId(newSessionId);
-      setSessionCreatedAt(new Date().toISOString());
+      setSessionId(nextSessionId);
+      setSessionCreatedAt(nextCreatedAt);
     }
     setIsGenerating(true);
     setError(null);
@@ -159,7 +161,8 @@ export function useGeneration() {
     setLastAutoFixKey('');
 
     const existingCode = code === DEFAULT_CODE ? '' : code;
-    setMessages(prev => [...prev, { role: 'user', text: prompt }]);
+    const baseMessages = [...messages, { role: 'user', text: prompt }];
+    setMessages(baseMessages);
 
     try {
       const response = await fetch(`${API_URL}/api/generate`, {
@@ -175,20 +178,40 @@ export function useGeneration() {
 
       const { code: newCode } = await response.json();
       
-      setCode(newCode);
-      setHistory(prev => [
-        ...prev,
+      const nextHistory = [
+        ...history,
         { role: 'user', content: prompt },
         { role: 'assistant', content: newCode },
-      ]);
-      setMessages(prev => [...prev, { role: 'assistant', text: "Here's your generated component!", code: newCode }]);
+      ];
+      const nextMessages = [...baseMessages, { role: 'assistant', text: "Here's your generated component!", code: newCode }];
+
+      setCode(newCode);
+      setHistory(nextHistory);
+      setMessages(nextMessages);
+
+      await upsertSession({
+        nextSessionId,
+        nextCreatedAt,
+        nextCode: newCode,
+        nextHistory,
+        nextMessages,
+      });
     } catch (err) {
+      const nextMessages = [...baseMessages, { role: 'assistant', text: `Error: ${err.message}`, isError: true }];
       setError(err.message);
-      setMessages(prev => [...prev, { role: 'assistant', text: `Error: ${err.message}`, isError: true }]);
+      setMessages(nextMessages);
+
+      await upsertSession({
+        nextSessionId,
+        nextCreatedAt,
+        nextCode: code,
+        nextHistory: history,
+        nextMessages,
+      });
     } finally {
       setIsGenerating(false);
     }
-  }, [code, history, sessionId]);
+  }, [code, history, messages, sessionCreatedAt, sessionId, upsertSession]);
 
   const repairFromError = useCallback(async (errorMessage, previousCode) => {
     if (!errorMessage || !previousCode || isGenerating || autoFixCount >= MAX_AUTO_FIXES) return;
@@ -211,15 +234,25 @@ export function useGeneration() {
       if (!response.ok) throw new Error('Auto-fix failed.');
 
       const { code: newCode } = await response.json();
+      const nextHistory = [...history, { role: 'user', content: fixPrompt }, { role: 'assistant', content: newCode }];
+
       setCode(newCode);
-      setHistory(prev => [...prev, { role: 'user', content: fixPrompt }, { role: 'assistant', content: newCode }]);
+      setHistory(nextHistory);
+
+      await upsertSession({
+        nextSessionId: sessionId,
+        nextCreatedAt: sessionCreatedAt,
+        nextCode: newCode,
+        nextHistory,
+        nextMessages: messages,
+      });
     } catch (err) {
       setError(err.message);
     } finally {
       setAutoFixCount(prev => prev + 1);
       setIsGenerating(false);
     }
-  }, [autoFixCount, history, isGenerating, lastAutoFixKey]);
+  }, [autoFixCount, history, isGenerating, lastAutoFixKey, messages, sessionCreatedAt, sessionId, upsertSession]);
 
   const reset = useCallback(() => {
     setCode(DEFAULT_CODE);

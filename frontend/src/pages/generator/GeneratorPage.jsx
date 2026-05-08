@@ -1,15 +1,39 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ChatPanel from '../../components/generator/ChatPanel';
 import LivePreview from '../../components/generator/LivePreview';
 import { useGeneration } from '../../hooks/useGeneration';
+import { useSearchParams } from 'react-router-dom';
+
+const CURRENT_SESSION_KEY = 'atelierui.currentSessionId';
 
 export default function GeneratorPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sessionParam = searchParams.get('session');
+  const newParam = searchParams.get('new');
+
+  if (sessionParam && localStorage.getItem(CURRENT_SESSION_KEY) !== sessionParam) {
+    localStorage.setItem(CURRENT_SESSION_KEY, sessionParam);
+  }
+
   const { code, setCode, messages, isGenerating, generate, reset, repairFromError } = useGeneration();
   const [chatVisible, setChatVisible] = useState(true);
   const [quickInput, setQuickInput] = useState('');
 
   const hasMessages = messages.length > 0;
   const showChatPanel = hasMessages && chatVisible;
+
+  useEffect(() => {
+    if (newParam) {
+      localStorage.removeItem(CURRENT_SESSION_KEY);
+      reset();
+      setSearchParams({}, { replace: true });
+      return;
+    }
+
+    if (!sessionParam) {
+      reset();
+    }
+  }, [newParam, sessionParam, reset, setSearchParams]);
 
   const handleQuickSubmit = (e) => {
     e.preventDefault();
