@@ -41,20 +41,25 @@ const Sidebar = ({ isOpen, onClose }) => {
             <h3 className="px-3 text-[0.65rem] font-semibold text-[color:var(--muted)] uppercase tracking-[0.25em] mb-2">Workspace</h3>
             <NavItem icon={Home} label="Dashboard" active={location.pathname === '/'} onClick={() => { navigate('/'); onClose(); }} />
             <NavItem icon={Sparkles} label="Generate" active={location.pathname === '/generate'} onClick={() => { navigate('/generate'); onClose(); }} />
-            <NavItem icon={Layers} label="Projects" active={false} />
-            <NavItem icon={MessageSquareCode} label="Generations" active={false} />
+            <NavItem icon={Layers} label="Projects" active={location.pathname === '/projects'} onClick={() => { navigate('/projects'); onClose(); }} />
+            <NavItem icon={MessageSquareCode} label="Generations" active={location.pathname === '/generations'} onClick={() => { navigate('/generations'); onClose(); }} />
           </div>
 
           <div className="space-y-1">
             <h3 className="px-3 text-[0.65rem] font-semibold text-[color:var(--muted)] uppercase tracking-[0.25em] mb-2">Assets</h3>
-            <NavItem icon={FileCode2} label="Components" active={false} />
-            <NavItem icon={History} label="History" active={false} />
+            <NavItem icon={FileCode2} label="Components" active={location.pathname === '/components'} onClick={() => { navigate('/components'); onClose(); }} />
+            <NavItem
+              icon={History}
+              label="History"
+              active={location.pathname === '/history'}
+              onClick={() => { navigate('/history'); onClose(); }}
+            />
           </div>
 
         </div>
 
         <div className="p-4 border-t border-[color:var(--border)]">
-          <NavItem icon={Settings} label="Settings" />
+          <NavItem icon={Settings} label="Settings" active={location.pathname === '/settings'} onClick={() => { navigate('/settings'); onClose(); }} />
         </div>
       </aside>
     </>

@@ -18,9 +18,21 @@ export default function Login() {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        alert('Check your email for the login link!');
+
+        if (data?.user) {
+          await supabase.from('profiles').upsert({
+            user_id: data.user.id,
+            email: data.user.email,
+          });
+        }
+
+        if (data?.session) {
+          navigate('/');
+        } else {
+          setError('Email confirmation is enabled in Supabase. Disable it to allow instant sign-in.');
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;

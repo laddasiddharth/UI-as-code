@@ -1,6 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+const CURRENT_SESSION_KEY = 'atelierui.currentSessionId';
+const SESSION_TABLE = 'chat_sessions';
 
 const DEFAULT_CODE = `import React from 'react';
 
@@ -23,11 +28,32 @@ export default function Preview() {
 
 const MAX_AUTO_FIXES = 2;
 
+function createSessionId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `session_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function loadCurrentSessionId() {
+  return localStorage.getItem(CURRENT_SESSION_KEY);
+}
+
+function buildSessionTitle(messages) {
+  const firstUser = messages.find((message) => message.role === 'user');
+  if (!firstUser?.text) return 'Untitled session';
+  return firstUser.text.length > 52 ? `${firstUser.text.slice(0, 52)}...` : firstUser.text;
+}
+
 function buildFixPrompt(errorToFix, previousCode) {
   return `The previous code generated this error:\n"${errorToFix}"\n\nHere is the broken code:\n${previousCode}\n\nFix the error and return the corrected code only.`;
 }
 
 export function useGeneration() {
+  const { user } = useAuth();
+  const [sessionId, setSessionId] = useState(null);
+  const [sessionCreatedAt, setSessionCreatedAt] = useState(null);
+  const [isHydrated, setIsHydrated] = useState(false);
   const [code, setCode] = useState(DEFAULT_CODE);
   const [history, setHistory] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -36,7 +62,97 @@ export function useGeneration() {
   const [autoFixCount, setAutoFixCount] = useState(0);
   const [lastAutoFixKey, setLastAutoFixKey] = useState('');
 
+  const syncSession = useCallback(async (nextSessionId, nextCreatedAt) => {
+    if (!nextSessionId || !user) return;
+    const now = new Date().toISOString();
+    const payload = {
+      id: nextSessionId,
+      user_id: user.id,
+      created_at: nextCreatedAt || now,
+      updated_at: now,
+      title: buildSessionTitle(messages),
+      code,
+      history,
+      messages,
+    };
+
+    const { error: upsertError } = await supabase
+      .from(SESSION_TABLE)
+      .upsert(payload, { onConflict: 'id' })
+      .select();
+
+    if (upsertError) {
+      console.error('Failed to sync session:', upsertError);
+      return;
+    }
+
+    localStorage.setItem(CURRENT_SESSION_KEY, nextSessionId);
+  }, [code, history, messages, user]);
+
+  useEffect(() => {
+    if (!user) {
+      setSessionId(null);
+      setSessionCreatedAt(null);
+      setCode(DEFAULT_CODE);
+      setHistory([]);
+      setMessages([]);
+      setIsHydrated(false);
+      return;
+    }
+
+    let isMounted = true;
+    const load = async () => {
+      const { data, error: fetchError } = await supabase
+        .from(SESSION_TABLE)
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      if (!isMounted) return;
+      if (fetchError) {
+        console.error('Failed to load sessions:', fetchError);
+        setIsHydrated(true);
+        return;
+      }
+
+      const list = data || [];
+
+      const storedId = loadCurrentSessionId();
+      const preferred = list.find((session) => session.id === storedId) || list[0];
+
+      if (preferred) {
+        setSessionId(preferred.id);
+        setSessionCreatedAt(preferred.created_at || preferred.createdAt || null);
+        setCode(preferred.code || DEFAULT_CODE);
+        setHistory(preferred.history || []);
+        setMessages(preferred.messages || []);
+      } else {
+        setSessionId(null);
+        setSessionCreatedAt(null);
+        setCode(DEFAULT_CODE);
+        setHistory([]);
+        setMessages([]);
+      }
+      setIsHydrated(true);
+    };
+
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || !isHydrated || !sessionId) return;
+    syncSession(sessionId, sessionCreatedAt);
+  }, [user, isHydrated, sessionId, sessionCreatedAt, syncSession]);
+
   const generate = useCallback(async (prompt, baasTemplate = null) => {
+    if (!sessionId) {
+      const newSessionId = createSessionId();
+      setSessionId(newSessionId);
+      setSessionCreatedAt(new Date().toISOString());
+    }
     setIsGenerating(true);
     setError(null);
     setAutoFixCount(0);
@@ -72,7 +188,7 @@ export function useGeneration() {
     } finally {
       setIsGenerating(false);
     }
-  }, [code, history]);
+  }, [code, history, sessionId]);
 
   const repairFromError = useCallback(async (errorMessage, previousCode) => {
     if (!errorMessage || !previousCode || isGenerating || autoFixCount >= MAX_AUTO_FIXES) return;
@@ -110,6 +226,9 @@ export function useGeneration() {
     setHistory([]);
     setMessages([]);
     setError(null);
+    setSessionId(null);
+    setSessionCreatedAt(null);
+    localStorage.removeItem(CURRENT_SESSION_KEY);
   }, []);
 
   return { code, setCode, messages, isGenerating, error, generate, reset, repairFromError };
