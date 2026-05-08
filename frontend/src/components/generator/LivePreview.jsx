@@ -159,8 +159,8 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
 
   return (
     <div className="absolute inset-0 flex flex-col bg-[color:var(--panel-strong)] overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-2 bg-[color:var(--panel-strong)] border-b border-[color:var(--border)] flex-shrink-0">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2 bg-[color:var(--panel-strong)] border-b border-[color:var(--border)] flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3">
           {showChatToggle && (
             <button
               onClick={onChatToggle}
@@ -192,7 +192,7 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
             </button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {activeTab === 'code' && (
             <div className="flex items-center gap-2 mr-2">
               <button onClick={handleCopy} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--ink)] transition-colors">

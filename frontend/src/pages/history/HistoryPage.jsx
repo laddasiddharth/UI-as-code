@@ -120,16 +120,16 @@ export default function HistoryPage() {
   };
 
   return (
-    <div className="space-y-6 pb-10">
-      <header>
+    <div className="page-shell pb-10">
+      <header className="page-header">
         <p className="text-xs uppercase tracking-[0.3em] text-[color:var(--muted)]">Assets</p>
-        <h1 className="font-display text-3xl sm:text-4xl text-[color:var(--ink)] mt-3">Chat History</h1>
-        <p className="text-sm text-[color:var(--muted)] mt-2">
+        <h1 className="font-display text-3xl sm:text-4xl text-[color:var(--ink)]">Chat History</h1>
+        <p className="text-sm text-[color:var(--muted)]">
           Review every generation and preview all previously produced code snippets.
         </p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 min-w-0">
+      <div className="grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-6 min-w-0">
         <section className="ink-card p-4 rounded-3xl">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-display text-lg text-[color:var(--ink)]">Sessions</h2>
@@ -151,7 +151,7 @@ export default function HistoryPage() {
                   className={`w-full px-3 py-2 rounded-2xl border transition-all ${
                     activeId === session.id
                       ? 'border-[color:var(--accent)] bg-[color:var(--accent)]/10'
-                      : 'border-[color:var(--border)] hover:bg-[color:var(--panel)]'
+                      : 'border-[color:var(--border)] hover:bg-white/5'
                   }`}
                 >
                   <div className="flex items-center gap-2">

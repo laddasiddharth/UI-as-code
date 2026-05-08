@@ -6,16 +6,16 @@ const Navbar = ({ onMenuToggle }) => {
   const { signOut } = useAuth();
 
   return (
-    <nav className="h-16 bg-[color:var(--panel-strong)] border-b border-[color:var(--border)] flex items-center justify-between px-4 sm:px-6 z-10 sticky top-0">
+    <nav className="h-14 sm:h-16 bg-transparent flex items-center justify-between px-3 sm:px-6 z-20 sticky top-0 backdrop-blur-md">
       <div className="flex items-center gap-4">
         <button 
           onClick={onMenuToggle}
-          className="p-2 -ml-2 rounded-md hover:bg-[color:var(--panel)] text-[color:var(--muted)] lg:hidden"
+          className="p-2 -ml-2 rounded-xl hover:bg-white/5 text-[color:var(--muted)] lg:hidden"
         >
           <Menu className="w-5 h-5" />
         </button>
         <div className="flex items-center gap-2">
-          <div className="bg-[color:var(--accent)]/15 p-2 rounded-xl">
+          <div className="bg-[color:var(--accent)]/15 p-2 rounded-2xl shadow-[0_0_0_1px_rgba(126,231,135,0.2)]">
             <Code2 className="w-5 h-5 text-[color:var(--accent)]" />
           </div>
           <span className="font-display text-lg tracking-tight text-[color:var(--ink)] hidden sm:block">
@@ -27,7 +27,7 @@ const Navbar = ({ onMenuToggle }) => {
       <div className="flex items-center gap-2 sm:gap-4">
         <button 
           onClick={signOut}
-          className="flex items-center gap-2 p-2 rounded-full hover:bg-[color:var(--accent)]/10 text-[color:var(--muted)] hover:text-[color:var(--accent)] transition-colors"
+          className="flex items-center gap-2 p-2 rounded-full hover:bg-white/5 text-[color:var(--muted)] hover:text-[color:var(--accent)] transition-colors"
           title="Sign out"
         >
           <LogOut className="w-5 h-5" />

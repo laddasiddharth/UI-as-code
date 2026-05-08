@@ -43,13 +43,13 @@ export default function GeneratorPage() {
   };
 
   return (
-    <div className="flex h-full w-full overflow-hidden bg-[color:var(--bg)] relative">
+    <div className="generator-shell w-full bg-[color:var(--bg)] relative">
       <div
-        className={`flex-shrink-0 border-r border-white/10 transition-all duration-300 ease-in-out overflow-hidden h-full ${
-          showChatPanel ? 'w-80' : 'w-0'
+        className={`generator-chat border-b lg:border-b-0 lg:border-r border-white/10 transition-all duration-300 ease-in-out ${
+          showChatPanel ? 'lg:w-80' : 'h-0 lg:w-0'
         }`}
       >
-        <div className="w-80 h-full">
+        <div className="w-full lg:w-80">
           <ChatPanel
             messages={messages}
             isGenerating={isGenerating}
@@ -60,8 +60,8 @@ export default function GeneratorPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col relative overflow-hidden h-full">
-        <div className="flex-1 relative w-full h-full">
+      <div className="flex-1 flex flex-col relative min-h-0">
+        <div className="flex-1 relative w-full min-h-[60vh]">
           <LivePreview
             code={code}
             isGenerating={isGenerating}
@@ -75,14 +75,14 @@ export default function GeneratorPage() {
 
         {!hasMessages && (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-[color:var(--bg)]/70 backdrop-blur-sm">
-            <div className="w-full max-w-2xl px-6">
-              <div className="glass-panel rounded-[32px] p-6 sm:p-8">
+            <div className="w-full max-w-2xl px-5 sm:px-6">
+              <div className="glass-panel rounded-[26px] p-5 sm:p-8">
                 <p className="text-xs uppercase tracking-[0.3em] text-[color:var(--muted)]">Launch</p>
                 <h2 className="font-display text-2xl sm:text-3xl text-[color:var(--ink)] mt-3">Start with a prompt</h2>
                 <p className="text-sm text-[color:var(--muted)] mt-2">
                   Describe the UI you want to build, then keep iterating without losing the vibe.
                 </p>
-                <form onSubmit={handleQuickSubmit} className="mt-5 flex items-end gap-2">
+                <form onSubmit={handleQuickSubmit} className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
                   <textarea
                     value={quickInput}
                     onChange={(e) => setQuickInput(e.target.value)}

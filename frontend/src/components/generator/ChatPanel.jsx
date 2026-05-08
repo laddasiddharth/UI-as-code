@@ -12,14 +12,14 @@ function MessageBubble({ message }) {
   };
 
   return (
-    <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+    <div className={`flex gap-3 w-full min-w-0 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
       <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
         isUser ? 'bg-[color:var(--ink)] text-[color:var(--panel-strong)]' : 'bg-[color:var(--accent)]/15 text-[color:var(--accent)]'
       }`}>
         {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
       </div>
-      <div className={`max-w-[85%] space-y-2 ${isUser ? 'items-end' : 'items-start'} flex flex-col`}>
-        <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+      <div className={`min-w-0 flex-1 space-y-2 ${isUser ? 'items-end' : 'items-start'} flex flex-col`}>
+        <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words whitespace-pre-wrap w-full ${
           message.isError
             ? 'bg-[color:var(--accent)]/10 text-[color:var(--accent)] border border-[color:var(--accent)]/30'
             : isUser
@@ -80,7 +80,7 @@ export default function ChatPanel({
 
   return (
     <div className="flex flex-col h-full bg-[color:var(--panel-strong)]">
-      <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--panel-strong)] border-b border-[color:var(--border)] flex-shrink-0">
+      <div className="flex items-center justify-between px-3 sm:px-4 py-3 bg-[color:var(--panel-strong)] border-b border-[color:var(--border)] flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="bg-[color:var(--accent)]/15 p-1 rounded-md">
             <Sparkles className="w-3.5 h-3.5 text-[color:var(--accent)]" />
@@ -99,7 +99,7 @@ export default function ChatPanel({
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="space-y-4">
             <div className="text-center py-6">
