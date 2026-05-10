@@ -27,12 +27,14 @@ function extractCode(aiResponse) {
     return match[1].trim();
   }
 
-  const importMatch = aiResponse.match(/import[\s\S]*?export default[\s\S]*?\n\}/);
+  const withoutFences = aiResponse.replace(/^```.*$/gm, '').trim();
+
+  const importMatch = withoutFences.match(/import[\s\S]*?export default[\s\S]*?\n\}/);
   if (importMatch) {
     return importMatch[0].trim();
   }
 
-  return aiResponse.replace(/^(Sure|Here is|Certainly|Okay|Alright|As an AI)[^\n]*\n/i, '').trim();
+  return withoutFences.replace(/^(Sure|Here is|Certainly|Okay|Alright|As an AI)[^\n]*\n/i, '').trim();
 }
 
 export const generateComponentCode = async (userPrompt, history = [], existingCode = '') => {

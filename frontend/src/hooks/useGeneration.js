@@ -82,11 +82,10 @@ export function useGeneration(externalSessionId = null) {
       code: nextCode,
       history: nextHistory,
       messages: nextMessages,
-      thumbnail: nextThumbnail ?? null,
     };
 
     const payloadVariants = [
-      ['id', 'user_id', 'updated_at', 'title', 'code', 'history', 'messages', 'thumbnail'],
+      ['id', 'user_id', 'updated_at', 'title', 'code', 'history', 'messages'],
       ['id', 'user_id', 'updated_at', 'title', 'code', 'history', 'messages'],
       ['id', 'user_id', 'updated_at', 'title', 'code', 'history'],
       ['id', 'user_id', 'updated_at', 'title', 'code', 'messages'],
@@ -111,12 +110,7 @@ export function useGeneration(externalSessionId = null) {
       }
 
       if (upsertError.code !== 'PGRST204') {
-        console.error('Failed to sync session:', {
-          code: upsertError.code,
-          message: upsertError.message,
-          details: upsertError.details,
-          hint: upsertError.hint,
-        });
+        console.error('Failed to sync session:', JSON.stringify(upsertError, null, 2));
         return;
       }
     }
@@ -215,7 +209,23 @@ export function useGeneration(externalSessionId = null) {
 
     const existingCode = code === DEFAULT_CODE ? '' : code;
     const baseMessages = [...messages, { role: 'user', text: prompt }];
-    setMessages(baseMessages);
+    const shouldWarn = prompt.trim().length > 180;
+    const warningMessage = {
+      role: 'assistant',
+      text: 'Heads up: longer prompts can take a bit more time to generate.',
+    };
+    const nextMessagesForUI = shouldWarn
+      ? [...baseMessages, warningMessage]
+      : baseMessages;
+    setMessages(nextMessagesForUI);
+
+    void upsertSession({
+      nextSessionId,
+      nextCreatedAt,
+      nextCode: code,
+      nextHistory: history,
+      nextMessages: nextMessagesForUI,
+    });
 
     try {
       const response = await fetch(`${API_URL}/api/generate`, {

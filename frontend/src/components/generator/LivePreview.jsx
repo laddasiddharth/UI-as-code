@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import * as ReactDOMClient from 'react-dom/client';
 import html2canvas from 'html2canvas';
-import { Eye, Code2, Loader2, AlertTriangle, RefreshCw, Copy, Check, PanelLeftClose, PanelLeftOpen, Sun, Moon, Undo2, Redo2, LayoutTemplate } from 'lucide-react';
+import { Eye, Code2, Loader2, AlertTriangle, RefreshCw, Copy, Check, PanelLeftClose, PanelLeftOpen, Sun, Moon, Undo2, Redo2 } from 'lucide-react';
 
 export default function LivePreview({
   code,
@@ -14,8 +14,6 @@ export default function LivePreview({
   headerActions,
   theme = 'light',
   onThemeChange,
-  templates = [],
-  onTemplateSelect,
   canUndo,
   canRedo,
   onUndo,
@@ -61,6 +59,9 @@ export default function LivePreview({
       // Fallback if no code block, just trim
       cleaned = localCode.trim();
     }
+
+    cleaned = cleaned.replace(/```[\s\S]*?```/g, '').trim();
+    cleaned = cleaned.replace(/^```.*$/gm, '').trim();
     
     // First, process specific imports we want to mock
     const lucideImportRegex = /import\s*\{([^}]*)\}\s*from\s*['"]lucide-react['"];?/gm;
@@ -325,6 +326,18 @@ export default function LivePreview({
                 const script = document.createElement('script');
                 script.text = transformed;
                 document.body.appendChild(script);
+
+                document.addEventListener('error', (event) => {
+                  const target = event.target;
+                  if (!target || target.tagName !== 'IMG') return;
+                  const currentSrc = target.getAttribute('src');
+                  if (!currentSrc || currentSrc.includes('images.weserv.nl')) return;
+                  const normalized = currentSrc
+                    .replace('https://', '')
+                    .replace('http://', '');
+                  target.setAttribute('referrerpolicy', 'no-referrer');
+                  target.src = 'https://images.weserv.nl/?url=' + encodeURIComponent(normalized);
+                }, true);
               };
 
               run().catch((err) => {
@@ -435,15 +448,6 @@ export default function LivePreview({
               <Code2 className="w-3.5 h-3.5" />
               Code
             </button>
-            <button
-              onClick={() => setActiveTab('templates')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                activeTab === 'templates' ? 'bg-[color:var(--accent)]/15 text-[color:var(--ink)]' : 'text-[color:var(--muted)] hover:text-[color:var(--ink)]'
-              }`}
-            >
-              <LayoutTemplate className="w-3.5 h-3.5" />
-              Templates
-            </button>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -538,29 +542,6 @@ export default function LivePreview({
               className="flex-1 w-full bg-transparent text-gray-300 font-mono text-sm p-6 focus:outline-none resize-none leading-relaxed selection:bg-purple-500/30"
               placeholder="Paste your code here..."
             />
-          </div>
-        )}
-        {activeTab === 'templates' && (
-          <div className="w-full h-full overflow-y-auto p-4 sm:p-6">
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold text-[color:var(--ink)]">Templates</h3>
-              <p className="text-xs text-[color:var(--muted)]">Pick a starter prompt to generate instantly.</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-              {templates.map((template) => (
-                <button
-                  key={template.title}
-                  onClick={() => {
-                    if (onTemplateSelect) onTemplateSelect(template.prompt);
-                    setActiveTab('preview');
-                  }}
-                  className="text-left p-4 rounded-2xl border border-[color:var(--border)] bg-[color:var(--panel)] hover:bg-[color:var(--panel-strong)] transition-colors"
-                >
-                  <p className="text-sm font-semibold text-[color:var(--ink)] mb-2">{template.title}</p>
-                  <p className="text-xs text-[color:var(--muted)] leading-relaxed">{template.description}</p>
-                </button>
-              ))}
-            </div>
           </div>
         )}
       </div>
