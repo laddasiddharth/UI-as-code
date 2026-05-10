@@ -86,14 +86,12 @@ export default function GeneratorPage() {
   }, [isResizing, resize, stopResizing]);
 
   useEffect(() => {
-    if (!isHydrated) return;
-    if (newParam === '1') {
+    if (newParam) {
       localStorage.removeItem(CURRENT_SESSION_KEY);
       reset();
-      // Remove the ?new=1 from URL without adding to history
       setSearchParams({}, { replace: true });
     }
-  }, [newParam, isHydrated, reset, setSearchParams]);
+  }, [newParam, reset, setSearchParams]);
 
   useEffect(() => {
     if (!isHydrated || isGenerating) return;

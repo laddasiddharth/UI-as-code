@@ -20,21 +20,35 @@ const openai = new OpenAI({
 function extractCode(aiResponse) {
   if (!aiResponse || typeof aiResponse !== 'string') return '';
 
+  // 1. Try to find content inside triple backticks
   const codeBlockRegex = /```(?:jsx|javascript|js|tsx)?\n([\s\S]*?)```/i;
   const match = aiResponse.match(codeBlockRegex);
-
   if (match && match[1]) {
     return match[1].trim();
   }
 
-  const withoutFences = aiResponse.replace(/^```.*$/gm, '').trim();
-
-  const importMatch = withoutFences.match(/import[\s\S]*?export default[\s\S]*?\n\}/);
-  if (importMatch) {
-    return importMatch[0].trim();
+  // 2. No backticks? Look for the core React pattern (imports + export default)
+  // This helps when the AI forgets fences but follows the instructions
+  const fullModuleRegex = /(import[\s\S]*?export\s+default[\s\S]*?)\n?$/m;
+  const moduleMatch = aiResponse.match(fullModuleRegex);
+  if (moduleMatch) {
+    return moduleMatch[1].trim();
   }
 
-  return withoutFences.replace(/^(Sure|Here is|Certainly|Okay|Alright|As an AI)[^\n]*\n/i, '').trim();
+  // 3. Fallback: Clean up common AI pre-ambles and return the rest
+  // We remove anything before the first 'import' or 'function' if they exist
+  let cleaned = aiResponse.trim();
+  const firstImport = cleaned.indexOf('import');
+  if (firstImport !== -1) {
+    cleaned = cleaned.substring(firstImport);
+  } else {
+    const firstExport = cleaned.indexOf('export');
+    if (firstExport !== -1) {
+      cleaned = cleaned.substring(firstExport);
+    }
+  }
+
+  return cleaned;
 }
 
 export const generateComponentCode = async (userPrompt, history = [], existingCode = '') => {
@@ -49,7 +63,6 @@ export const generateComponentCode = async (userPrompt, history = [], existingCo
     const modelCandidates = [
       process.env.OPENROUTER_MODEL,
       "meta-llama/llama-3.3-8b-instruct:free",
-      "openrouter/auto"
     ].filter(Boolean);
 
     let lastError = null;

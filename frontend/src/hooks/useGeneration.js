@@ -227,14 +227,23 @@ export function useGeneration(externalSessionId = null) {
       nextMessages: nextMessagesForUI,
     });
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
     try {
       const response = await fetch(`${API_URL}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, history, baasTemplate, existingCode }),
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
+        if (response.status === 408 || response.status === 504) {
+          throw new Error('Generation timed out. The AI model is taking too long to respond.');
+        }
         const err = await response.json();
         throw new Error(err.error || 'Generation failed.');
       }
@@ -274,8 +283,12 @@ export function useGeneration(externalSessionId = null) {
         nextThumbnail: null,
       });
     } catch (err) {
-      const nextMessages = [...baseMessages, { role: 'assistant', text: `Error: ${err.message}`, isError: true }];
-      setError(err.message);
+      const errorMessage = err.name === 'AbortError' 
+        ? 'Generation timed out. The server took too long to respond (30s).' 
+        : err.message;
+        
+      const nextMessages = [...baseMessages, { role: 'assistant', text: `Error: ${errorMessage}`, isError: true }];
+      setError(errorMessage);
       setMessages(nextMessages);
 
       await upsertSession({

@@ -6,14 +6,11 @@ function MessageBubble({ message }) {
   const isUser = message.role === 'user';
 
   const handleCopy = async () => {
-    if (!message.code) return;
     try {
       await navigator.clipboard.writeText(message.code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // clipboard access denied — silently ignore
-    }
+    } catch {}
   };
 
   return (
