@@ -77,7 +77,6 @@ export function useGeneration(externalSessionId = null) {
     const basePayload = {
       id: nextSessionId,
       user_id: user.id,
-      created_at: nextCreatedAt || now,
       updated_at: now,
       title: buildSessionTitle(nextMessages),
       code: nextCode,
@@ -87,12 +86,12 @@ export function useGeneration(externalSessionId = null) {
     };
 
     const payloadVariants = [
-      ['id', 'user_id', 'created_at', 'updated_at', 'title', 'code', 'history', 'messages', 'thumbnail'],
-      ['id', 'user_id', 'created_at', 'updated_at', 'title', 'code', 'history', 'messages'],
-      ['id', 'user_id', 'created_at', 'updated_at', 'title', 'code', 'history'],
-      ['id', 'user_id', 'created_at', 'updated_at', 'title', 'code', 'messages'],
-      ['id', 'user_id', 'created_at', 'updated_at', 'title', 'code'],
-      ['id', 'user_id', 'created_at', 'updated_at', 'title'],
+      ['id', 'user_id', 'updated_at', 'title', 'code', 'history', 'messages', 'thumbnail'],
+      ['id', 'user_id', 'updated_at', 'title', 'code', 'history', 'messages'],
+      ['id', 'user_id', 'updated_at', 'title', 'code', 'history'],
+      ['id', 'user_id', 'updated_at', 'title', 'code', 'messages'],
+      ['id', 'user_id', 'updated_at', 'title', 'code'],
+      ['id', 'user_id', 'updated_at', 'title'],
     ];
 
     for (const keys of payloadVariants) {
