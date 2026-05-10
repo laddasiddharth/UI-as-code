@@ -31,7 +31,7 @@ export default function Login() {
         if (data?.session) {
           navigate('/');
         } else {
-          setError('Account created! Please check your email to confirm your account before signing in.');
+          setError('Account created! Check your email to confirm before signing in.');
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });

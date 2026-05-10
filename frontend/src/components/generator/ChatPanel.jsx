@@ -6,6 +6,7 @@ function MessageBubble({ message }) {
   const isUser = message.role === 'user';
 
   const handleCopy = async () => {
+    if (!message.code) return;
     try {
       await navigator.clipboard.writeText(message.code);
       setCopied(true);

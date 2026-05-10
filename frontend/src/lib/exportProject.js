@@ -91,7 +91,7 @@ npm run dev
 \`\`\`
 
 ## Stack
-- React 18
+- React 19
 - Vite 5
 - Tailwind CSS v4
 - Lucide React (icons)

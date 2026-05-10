@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import ChatPanel from '../../components/generator/ChatPanel';
 import LivePreview from '../../components/generator/LivePreview';
+import ExportButton from '../../components/generator/ExportButton';
 import { useGeneration } from '../../hooks/useGeneration';
 import { useSearchParams } from 'react-router-dom';
 import { Sparkles, Loader2, Send } from 'lucide-react';
@@ -16,12 +17,60 @@ export default function GeneratorPage() {
     localStorage.setItem(CURRENT_SESSION_KEY, sessionParam);
   }
 
-  const { code, setCode, messages, isGenerating, generate, reset, repairFromError } = useGeneration(sessionParam);
+  const {
+    code,
+    setCode,
+    messages,
+    isGenerating,
+    generate,
+    reset,
+    repairFromError,
+    isHydrated,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
+    updateThumbnail,
+  } = useGeneration(sessionParam);
   const [chatVisible, setChatVisible] = useState(true);
   const [quickInput, setQuickInput] = useState('');
   const [chatWidth, setChatWidth] = useState(40); // percentage
   const [isResizing, setIsResizing] = useState(false);
+  const [previewTheme, setPreviewTheme] = useState('dark');
   const containerRef = React.useRef(null);
+
+  const templatePrompts = [
+    {
+      title: 'SaaS Pricing Grid',
+      description: 'Three-tier pricing section with highlights, badges, and a CTA row.',
+      prompt: 'Design a SaaS pricing grid with three tiers, feature lists, and a highlighted middle plan. Use modern spacing and a bold CTA row.'
+    },
+    {
+      title: 'Analytics Dashboard',
+      description: 'KPI cards, trends, and a clean chart layout for a dark dashboard.',
+      prompt: 'Create a dark analytics dashboard with KPI cards, a chart section, and a recent activity list.'
+    },
+    {
+      title: 'Auth Screen',
+      description: 'Split layout with brand panel and sign-in form.',
+      prompt: 'Build a modern authentication screen with a split layout, brand panel, and sign-in form.'
+    },
+    {
+      title: 'Product Landing',
+      description: 'Hero, feature grid, and testimonial row in a premium style.',
+      prompt: 'Create a product landing page hero with a feature grid and a testimonial row, using premium styling.'
+    },
+    {
+      title: 'Settings Panel',
+      description: 'Card-based settings layout with toggles and dropdowns.',
+      prompt: 'Design a settings panel with card sections, toggles, and dropdowns in a clean UI.'
+    },
+    {
+      title: 'Project Kanban',
+      description: 'Three-column kanban board with task cards and status headers.',
+      prompt: 'Design a kanban board with three columns, task cards, and status headers.'
+    },
+  ];
 
   const hasMessages = messages.length > 0;
   const showPreview = hasMessages && (code || isGenerating);
@@ -67,13 +116,22 @@ export default function GeneratorPage() {
   }, [isResizing, resize, stopResizing]);
 
   useEffect(() => {
+    if (!isHydrated) return;
     if (newParam === '1') {
       localStorage.removeItem(CURRENT_SESSION_KEY);
       reset();
       // Remove the ?new=1 from URL without adding to history
       setSearchParams({}, { replace: true });
     }
-  }, [newParam, reset, setSearchParams]);
+  }, [newParam, isHydrated, reset, setSearchParams]);
+
+  if (!isHydrated) {
+    return (
+      <div className="flex h-full w-full items-center justify-center text-sm text-[color:var(--muted)]">
+        Loading your session...
+      </div>
+    );
+  }
 
   const handleQuickSubmit = (e) => {
     e.preventDefault();
@@ -186,6 +244,21 @@ export default function GeneratorPage() {
             chatVisible={chatVisible}
             showChatToggle={true}
             onCodeChange={setCode}
+            theme={previewTheme}
+            onThemeChange={setPreviewTheme}
+            templates={templatePrompts}
+            onTemplateSelect={(prompt) => generate(prompt)}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={undo}
+            onRedo={redo}
+            onThumbnail={updateThumbnail}
+            headerActions={(
+              <ExportButton
+                code={code}
+                disabled={isGenerating || !messages.length}
+              />
+            )}
           />
         )}
       </div>

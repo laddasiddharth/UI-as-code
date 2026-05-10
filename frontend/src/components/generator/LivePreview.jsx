@@ -1,13 +1,35 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Eye, Code2, Loader2, AlertTriangle, RefreshCw, Copy, Check, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import * as ReactDOMClient from 'react-dom/client';
+import html2canvas from 'html2canvas';
+import { Eye, Code2, Loader2, AlertTriangle, RefreshCw, Copy, Check, PanelLeftClose, PanelLeftOpen, Sun, Moon, Undo2, Redo2, LayoutTemplate } from 'lucide-react';
 
-export default function LivePreview({ code, isGenerating, onError, onChatToggle, chatVisible, showChatToggle, onCodeChange }) {
+export default function LivePreview({
+  code,
+  isGenerating,
+  onError,
+  onChatToggle,
+  chatVisible,
+  showChatToggle,
+  onCodeChange,
+  headerActions,
+  theme = 'light',
+  onThemeChange,
+  templates = [],
+  onTemplateSelect,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
+  onThumbnail,
+}) {
   const [activeTab, setActiveTab] = useState('preview');
   const [iframeKey, setIframeKey] = useState(0);
+  const [iframeReady, setIframeReady] = useState(false);
   const [runtimeError, setRuntimeError] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
   const [localCode, setLocalCode] = useState(code);
   const iframeRef = useRef(null);
+  const lastCapturedRef = useRef('');
 
   useEffect(() => {
     setLocalCode(code);
@@ -217,16 +239,24 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
   }, [localCode]);
 
   const srcDoc = useMemo(() => {
+    const runtimeCode = `
+      const { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } = React;
+      let exportDefault = null;
+      ${processedCode
+        .replace(/export\s+default\s+/g, 'exportDefault = ')
+        .replace(/export\s+(const|let|var|function|class)\s+/g, '$1 ')
+        .replace(/export\s+\{[^}]+\}\s*;/g, '')
+      }
+    `;
+
     return `
       <!DOCTYPE html>
-      <html>
+      <html class="${theme === 'dark' ? 'dark' : ''}">
         <head>
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <script src="https://cdn.tailwindcss.com"></script>
           <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
-          <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
-          <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
           <script>
             window.Lucide = { createIcons: () => {} };
             const LucideProxy = new Proxy({}, {
@@ -243,25 +273,70 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
             window.LucideReact = LucideProxy;
           </script>
           <style>
-            body { margin: 0; padding: 0; background: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+            body { margin: 0; padding: 0; background: ${theme === 'dark' ? '#0f1117' : '#fff'}; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
             #root { min-height: 100vh; }
           </style>
         </head>
         <body>
           <div id="root"></div>
-          <script type="text/babel">
-            const { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } = React;
-            let exportDefault = null;
-            ${processedCode
-              .replace(/export\s+default\s+/g, 'exportDefault = ')
-              .replace(/export\s+(const|let|var|function|class)\s+/g, '$1 ')
-              .replace(/export\s+\{[^}]+\}\s*;/g, '')
-            }
+          <script>
+            (function () {
+              const parentReact = window.parent && window.parent.__PREVIEW_REACT__;
+              if (parentReact?.React && parentReact?.ReactDOM) {
+                window.React = parentReact.React;
+                window.ReactDOM = parentReact.ReactDOM;
+              }
+
+              const reactUrls = [
+                'https://unpkg.com/react@19.0.0/umd/react.production.min.js',
+                'https://cdn.jsdelivr.net/npm/react@19.0.0/umd/react.production.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/react/19.0.0/umd/react.production.min.js'
+              ];
+              const reactDomUrls = [
+                'https://unpkg.com/react-dom@19.0.0/umd/react-dom.production.min.js',
+                'https://cdn.jsdelivr.net/npm/react-dom@19.0.0/umd/react-dom.production.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/react-dom/19.0.0/umd/react-dom.production.min.js'
+              ];
+
+              const loadScript = (urls) => new Promise((resolve, reject) => {
+                const tryNext = (index) => {
+                  if (index >= urls.length) {
+                    reject(new Error('Failed to load script: ' + urls[urls.length - 1]));
+                    return;
+                  }
+                  const script = document.createElement('script');
+                  script.src = urls[index];
+                  script.onload = () => resolve();
+                  script.onerror = () => tryNext(index + 1);
+                  document.head.appendChild(script);
+                };
+                tryNext(0);
+              });
+
+              const run = async () => {
+                if (!window.React) {
+                  await loadScript(reactUrls);
+                }
+                if (!window.ReactDOM) {
+                  await loadScript(reactDomUrls);
+                }
+                const componentCode = ${JSON.stringify(runtimeCode)};
+                const transformed = Babel.transform(componentCode, { presets: ['react'] }).code;
+                const script = document.createElement('script');
+                script.text = transformed;
+                document.body.appendChild(script);
+              };
+
+              run().catch((err) => {
+                console.error('Preview bootstrap failed:', err);
+                window.parent.postMessage({ type: 'error', message: err.message }, '*');
+              });
+            })();
           </script>
         </body>
       </html>
     `;
-  }, [processedCode]);
+  }, [processedCode, theme]);
 
   useEffect(() => {
     const handleMessage = (event) => {
@@ -277,6 +352,55 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
   useEffect(() => {
     setRuntimeError(null);
   }, [localCode]);
+
+  useEffect(() => {
+    setIframeReady(false);
+  }, [iframeKey, code]);
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    const handleLoad = () => setIframeReady(true);
+    iframe.addEventListener('load', handleLoad);
+    return () => iframe.removeEventListener('load', handleLoad);
+  }, [iframeRef]);
+
+  useEffect(() => {
+    if (!iframeReady || isGenerating || activeTab !== 'preview' || !onThumbnail) return;
+    const captureKey = `${code}::${theme}`;
+    if (!code || lastCapturedRef.current === captureKey) return;
+
+    const capture = async () => {
+      const iframeDoc = iframeRef.current?.contentDocument;
+      const root = iframeDoc?.body;
+      if (!root) return;
+
+      try {
+        const canvas = await html2canvas(root, {
+          backgroundColor: theme === 'dark' ? '#0f1117' : '#ffffff',
+          scale: 0.5,
+          logging: false,
+          useCORS: true,
+        });
+        const dataUrl = canvas.toDataURL('image/png', 0.7);
+        lastCapturedRef.current = captureKey;
+        onThumbnail(dataUrl);
+      } catch (err) {
+        console.warn('Thumbnail capture failed:', err);
+      }
+    };
+
+    const raf = requestAnimationFrame(() => capture());
+    return () => cancelAnimationFrame(raf);
+  }, [activeTab, code, iframeReady, isGenerating, onThumbnail, theme]);
+
+  useEffect(() => {
+    window.__PREVIEW_REACT__ = { React, ReactDOM: ReactDOMClient };
+    return () => {
+      delete window.__PREVIEW_REACT__;
+    };
+  }, []);
 
   return (
     <div className="absolute inset-0 flex flex-col bg-[color:var(--panel-strong)] overflow-hidden">
@@ -311,9 +435,48 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
               <Code2 className="w-3.5 h-3.5" />
               Code
             </button>
+            <button
+              onClick={() => setActiveTab('templates')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                activeTab === 'templates' ? 'bg-[color:var(--accent)]/15 text-[color:var(--ink)]' : 'text-[color:var(--muted)] hover:text-[color:var(--ink)]'
+              }`}
+            >
+              <LayoutTemplate className="w-3.5 h-3.5" />
+              Templates
+            </button>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {(onUndo || onRedo) && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={onUndo}
+                disabled={!canUndo}
+                className="p-1.5 rounded-md border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--ink)] disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Undo"
+              >
+                <Undo2 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={onRedo}
+                disabled={!canRedo}
+                className="p-1.5 rounded-md border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--ink)] disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Redo"
+              >
+                <Redo2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+          {onThemeChange && (
+            <button
+              onClick={() => onThemeChange(theme === 'dark' ? 'light' : 'dark')}
+              className="p-1.5 rounded-md border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--ink)]"
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+            </button>
+          )}
+          {headerActions}
           {activeTab === 'code' && (
             <div className="flex items-center gap-2 mr-2">
               <button onClick={handleCopy} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--ink)] transition-colors">
@@ -352,7 +515,7 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
           </div>
         )}
 
-        {activeTab === 'preview' ? (
+        {activeTab === 'preview' && (
           <div className="w-full h-full flex flex-col">
             {runtimeError && (
               <div className="p-4 bg-red-50 border-b border-red-100 flex items-start gap-2 text-red-700">
@@ -365,7 +528,8 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
             )}
             <iframe key={iframeKey} ref={iframeRef} srcDoc={srcDoc} className="w-full h-full border-none bg-white" sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin" title="Preview" />
           </div>
-        ) : (
+        )}
+        {activeTab === 'code' && (
           <div className="w-full h-full bg-[#0d1117] flex flex-col">
             <textarea
               value={localCode}
@@ -374,6 +538,29 @@ export default function LivePreview({ code, isGenerating, onError, onChatToggle,
               className="flex-1 w-full bg-transparent text-gray-300 font-mono text-sm p-6 focus:outline-none resize-none leading-relaxed selection:bg-purple-500/30"
               placeholder="Paste your code here..."
             />
+          </div>
+        )}
+        {activeTab === 'templates' && (
+          <div className="w-full h-full overflow-y-auto p-4 sm:p-6">
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold text-[color:var(--ink)]">Templates</h3>
+              <p className="text-xs text-[color:var(--muted)]">Pick a starter prompt to generate instantly.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+              {templates.map((template) => (
+                <button
+                  key={template.title}
+                  onClick={() => {
+                    if (onTemplateSelect) onTemplateSelect(template.prompt);
+                    setActiveTab('preview');
+                  }}
+                  className="text-left p-4 rounded-2xl border border-[color:var(--border)] bg-[color:var(--panel)] hover:bg-[color:var(--panel-strong)] transition-colors"
+                >
+                  <p className="text-sm font-semibold text-[color:var(--ink)] mb-2">{template.title}</p>
+                  <p className="text-xs text-[color:var(--muted)] leading-relaxed">{template.description}</p>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>

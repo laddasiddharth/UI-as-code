@@ -54,6 +54,8 @@ export function useGeneration(externalSessionId = null) {
   const [sessionId, setSessionId] = useState(null);
   const [sessionCreatedAt, setSessionCreatedAt] = useState(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [snapshots, setSnapshots] = useState([]);
+  const [snapshotIndex, setSnapshotIndex] = useState(-1);
   const [code, setCode] = useState(DEFAULT_CODE);
   const [history, setHistory] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -68,10 +70,11 @@ export function useGeneration(externalSessionId = null) {
     nextCode,
     nextHistory,
     nextMessages,
+    nextThumbnail,
   }) => {
     if (!nextSessionId || !user) return;
     const now = new Date().toISOString();
-    const payload = {
+    const basePayload = {
       id: nextSessionId,
       user_id: user.id,
       created_at: nextCreatedAt || now,
@@ -80,17 +83,47 @@ export function useGeneration(externalSessionId = null) {
       code: nextCode,
       history: nextHistory,
       messages: nextMessages,
+      thumbnail: nextThumbnail ?? null,
     };
 
-    const { error: upsertError } = await supabase
-      .from(SESSION_TABLE)
-      .upsert(payload, { onConflict: 'id' })
-      .select();
+    const payloadVariants = [
+      ['id', 'user_id', 'created_at', 'updated_at', 'title', 'code', 'history', 'messages', 'thumbnail'],
+      ['id', 'user_id', 'created_at', 'updated_at', 'title', 'code', 'history', 'messages'],
+      ['id', 'user_id', 'created_at', 'updated_at', 'title', 'code', 'history'],
+      ['id', 'user_id', 'created_at', 'updated_at', 'title', 'code', 'messages'],
+      ['id', 'user_id', 'created_at', 'updated_at', 'title', 'code'],
+      ['id', 'user_id', 'created_at', 'updated_at', 'title'],
+    ];
 
-    if (upsertError) {
-      console.error('Failed to sync session:', upsertError);
-      return;
+    for (const keys of payloadVariants) {
+      const payload = keys.reduce((acc, key) => {
+        acc[key] = basePayload[key];
+        return acc;
+      }, {});
+
+      const { error: upsertError } = await supabase
+        .from(SESSION_TABLE)
+        .upsert(payload, { onConflict: 'id' })
+        .select();
+
+      if (!upsertError) {
+        localStorage.setItem(CURRENT_SESSION_KEY, nextSessionId);
+        return;
+      }
+
+      if (upsertError.code !== 'PGRST204') {
+        console.error('Failed to sync session:', {
+          code: upsertError.code,
+          message: upsertError.message,
+          details: upsertError.details,
+          hint: upsertError.hint,
+        });
+        return;
+      }
     }
+
+    console.error('Failed to sync session: schema is missing expected columns.');
+    return;
 
     localStorage.setItem(CURRENT_SESSION_KEY, nextSessionId);
   }, [user]);
@@ -102,6 +135,8 @@ export function useGeneration(externalSessionId = null) {
       setCode(DEFAULT_CODE);
       setHistory([]);
       setMessages([]);
+      setSnapshots([]);
+      setSnapshotIndex(-1);
       setIsHydrated(false);
       return;
     }
@@ -132,12 +167,30 @@ export function useGeneration(externalSessionId = null) {
         setCode(preferred.code || DEFAULT_CODE);
         setHistory(preferred.history || []);
         setMessages(preferred.messages || []);
+        const initialSnapshot = {
+          code: preferred.code || DEFAULT_CODE,
+          history: preferred.history || [],
+          messages: preferred.messages || [],
+          createdAt: preferred.updated_at || preferred.created_at || new Date().toISOString(),
+          thumbnail: preferred.thumbnail || null,
+        };
+        setSnapshots([initialSnapshot]);
+        setSnapshotIndex(0);
       } else {
         setSessionId(null);
         setSessionCreatedAt(null);
         setCode(DEFAULT_CODE);
         setHistory([]);
         setMessages([]);
+        const initialSnapshot = {
+          code: DEFAULT_CODE,
+          history: [],
+          messages: [],
+          createdAt: new Date().toISOString(),
+          thumbnail: null,
+        };
+        setSnapshots([initialSnapshot]);
+        setSnapshotIndex(0);
       }
       setIsHydrated(true);
     };
@@ -149,6 +202,7 @@ export function useGeneration(externalSessionId = null) {
   }, [user, externalSessionId]);
 
   const generate = useCallback(async (prompt, baasTemplate = null) => {
+    if (isGenerating) return;
     const nextSessionId = sessionId || createSessionId();
     const nextCreatedAt = sessionCreatedAt || new Date().toISOString();
     if (!sessionId) {
@@ -184,10 +238,23 @@ export function useGeneration(externalSessionId = null) {
         { role: 'assistant', content: newCode },
       ];
       const nextMessages = [...baseMessages, { role: 'assistant', text: "Here's your generated component!", code: newCode }];
+      const nextSnapshot = {
+        code: newCode,
+        history: nextHistory,
+        messages: nextMessages,
+        createdAt: new Date().toISOString(),
+        thumbnail: null,
+      };
 
       setCode(newCode);
       setHistory(nextHistory);
       setMessages(nextMessages);
+      setSnapshots((prev) => {
+        const base = snapshotIndex >= 0 ? prev.slice(0, snapshotIndex + 1) : [];
+        const next = [...base, nextSnapshot];
+        setSnapshotIndex(next.length - 1);
+        return next;
+      });
 
       await upsertSession({
         nextSessionId,
@@ -195,6 +262,7 @@ export function useGeneration(externalSessionId = null) {
         nextCode: newCode,
         nextHistory,
         nextMessages,
+        nextThumbnail: null,
       });
     } catch (err) {
       const nextMessages = [...baseMessages, { role: 'assistant', text: `Error: ${err.message}`, isError: true }];
@@ -207,11 +275,58 @@ export function useGeneration(externalSessionId = null) {
         nextCode: code,
         nextHistory: history,
         nextMessages,
+        nextThumbnail: snapshots[snapshotIndex]?.thumbnail ?? null,
       });
     } finally {
       setIsGenerating(false);
     }
-  }, [code, history, messages, sessionCreatedAt, sessionId, upsertSession]);
+  }, [code, history, isGenerating, messages, sessionCreatedAt, sessionId, snapshotIndex, snapshots, upsertSession]);
+
+  const restoreSnapshot = useCallback(async (index) => {
+    if (index < 0 || index >= snapshots.length) return;
+    if (isGenerating) return;
+    const snapshot = snapshots[index];
+    setCode(snapshot.code || DEFAULT_CODE);
+    setHistory(snapshot.history || []);
+    setMessages(snapshot.messages || []);
+    setSnapshotIndex(index);
+    await upsertSession({
+      nextSessionId: sessionId,
+      nextCreatedAt: sessionCreatedAt,
+      nextCode: snapshot.code || DEFAULT_CODE,
+      nextHistory: snapshot.history || [],
+      nextMessages: snapshot.messages || [],
+      nextThumbnail: snapshot.thumbnail ?? null,
+    });
+  }, [isGenerating, sessionCreatedAt, sessionId, snapshots, upsertSession]);
+
+  const undo = useCallback(() => {
+    if (snapshotIndex <= 0) return;
+    restoreSnapshot(snapshotIndex - 1);
+  }, [restoreSnapshot, snapshotIndex]);
+
+  const redo = useCallback(() => {
+    if (snapshotIndex >= snapshots.length - 1) return;
+    restoreSnapshot(snapshotIndex + 1);
+  }, [restoreSnapshot, snapshotIndex, snapshots.length]);
+
+  const updateThumbnail = useCallback(async (dataUrl) => {
+    if (!dataUrl || snapshotIndex < 0) return;
+    setSnapshots((prev) => {
+      const next = [...prev];
+      if (!next[snapshotIndex]) return prev;
+      next[snapshotIndex] = { ...next[snapshotIndex], thumbnail: dataUrl };
+      return next;
+    });
+    await upsertSession({
+      nextSessionId: sessionId,
+      nextCreatedAt: sessionCreatedAt,
+      nextCode: code,
+      nextHistory: history,
+      nextMessages: messages,
+      nextThumbnail: dataUrl,
+    });
+  }, [code, history, messages, sessionCreatedAt, sessionId, snapshotIndex, upsertSession]);
 
   const repairFromError = useCallback(async (errorMessage, previousCode) => {
     if (!errorMessage || !previousCode || isGenerating || autoFixCount >= MAX_AUTO_FIXES) return;
@@ -245,6 +360,7 @@ export function useGeneration(externalSessionId = null) {
         nextCode: newCode,
         nextHistory,
         nextMessages: messages,
+        nextThumbnail: snapshots[snapshotIndex]?.thumbnail ?? null,
       });
     } catch (err) {
       setError(err.message);
@@ -252,7 +368,7 @@ export function useGeneration(externalSessionId = null) {
       setAutoFixCount(prev => prev + 1);
       setIsGenerating(false);
     }
-  }, [autoFixCount, history, isGenerating, lastAutoFixKey, messages, sessionCreatedAt, sessionId, upsertSession]);
+  }, [autoFixCount, history, isGenerating, lastAutoFixKey, messages, sessionCreatedAt, sessionId, snapshotIndex, snapshots, upsertSession]);
 
   const reset = useCallback(() => {
     setCode(DEFAULT_CODE);
@@ -262,7 +378,37 @@ export function useGeneration(externalSessionId = null) {
     setSessionId(null);
     setSessionCreatedAt(null);
     localStorage.removeItem(CURRENT_SESSION_KEY);
+    const resetSnapshot = {
+      code: DEFAULT_CODE,
+      history: [],
+      messages: [],
+      createdAt: new Date().toISOString(),
+      thumbnail: null,
+    };
+    setSnapshots([resetSnapshot]);
+    setSnapshotIndex(0);
   }, []);
 
-  return { code, setCode, messages, isGenerating, error, generate, reset, repairFromError };
+  const canUndo = snapshotIndex > 0;
+  const canRedo = snapshotIndex >= 0 && snapshotIndex < snapshots.length - 1;
+
+  return {
+    code,
+    setCode,
+    messages,
+    isGenerating,
+    error,
+    generate,
+    reset,
+    repairFromError,
+    isHydrated,
+    snapshots,
+    snapshotIndex,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
+    restoreSnapshot,
+    updateThumbnail,
+  };
 }

@@ -70,7 +70,7 @@ export default function ExportButton({ code, disabled }) {
                   ['vite.config.js', 'Vite + Tailwind CSS v4 setup'],
                   ['src/App.jsx', 'Your generated component'],
                   ['src/index.css', 'Tailwind v4 import'],
-                  ['package.json', 'React 18 + Lucide React'],
+                  ['package.json', 'React 19 + Lucide React'],
                   ['README.md', 'Getting started guide'],
                 ].map(([file, desc]) => (
                   <div key={file} className="flex items-center gap-3">

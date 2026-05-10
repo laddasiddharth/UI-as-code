@@ -3,9 +3,14 @@ import { SYSTEM_PROMPT, getIterationPrompt } from './prompts.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
+if (!process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY === 'your_openrouter_api_key_here') {
+  console.error('ERROR: OPENROUTER_API_KEY is not set in backend/.env');
+  process.exit(1);
+}
+
 const openai = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
-  apiKey: process.env.OPENROUTER_API_KEY || "placeholder_key",
+  apiKey: process.env.OPENROUTER_API_KEY,
   defaultHeaders: {
     "HTTP-Referer": "http://localhost:3001",
     "X-Title": "UI-as-Code Platform",
@@ -22,7 +27,7 @@ function extractCode(aiResponse) {
     return match[1].trim();
   }
 
-  const importMatch = aiResponse.match(/import[\s\S]*export default[\s\S]*\}/);
+  const importMatch = aiResponse.match(/import[\s\S]*?export default[\s\S]*?\n\}/);
   if (importMatch) {
     return importMatch[0].trim();
   }
@@ -42,7 +47,6 @@ export const generateComponentCode = async (userPrompt, history = [], existingCo
     const modelCandidates = [
       process.env.OPENROUTER_MODEL,
       "meta-llama/llama-3.3-8b-instruct:free",
-      "openrouter/auto:free",
       "openrouter/auto"
     ].filter(Boolean);
 

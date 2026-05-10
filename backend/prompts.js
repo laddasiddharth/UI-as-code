@@ -60,5 +60,10 @@ Assume the following Firebase auth instance is already initialized and importabl
   import { auth } from './lib/firebase';
   import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 Use these functions for the auth flow and handle loading/error states clearly.
+Assume the Firebase app is already initialized. Create a minimal firebase.js file:
+  import { initializeApp } from 'firebase/app';
+  import { getAuth } from 'firebase/auth';
+  const app = initializeApp({ /* paste your config */ });
+  export const auth = getAuth(app);
 `,
 };
