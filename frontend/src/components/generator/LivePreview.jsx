@@ -377,7 +377,7 @@ export default function LivePreview({
         </body>
       </html>
     `;
-  }, [processedCode, theme]);
+  }, [processedCode]);
 
   useEffect(() => {
     const handleMessage = (event) => {
@@ -396,6 +396,20 @@ export default function LivePreview({
   useEffect(() => {
     setRuntimeError(null);
   }, [localCode]);
+
+  useEffect(() => {
+    // Seamlessly toggle theme without reloading the iframe
+    if (iframeRef.current && iframeRef.current.contentDocument) {
+      const htmlEl = iframeRef.current.contentDocument.documentElement;
+      if (theme === 'dark') {
+        htmlEl.classList.add('dark');
+        htmlEl.style.background = '#0f1117';
+      } else {
+        htmlEl.classList.remove('dark');
+        htmlEl.style.background = '#fff';
+      }
+    }
+  }, [theme, iframeReady]);
 
   useEffect(() => {
     setIframeReady(false);

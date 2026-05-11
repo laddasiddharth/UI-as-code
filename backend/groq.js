@@ -59,15 +59,16 @@ function ensureDefaultExport(code) {
   if (!code) return '';
   if (hasDefaultExport(code)) return code;
 
-  const functionMatch = code.match(/\bfunction\s+([A-Z][A-Za-z0-9_]*)\s*\(/);
-  const constMatch = code.match(/\bconst\s+([A-Z][A-Za-z0-9_]*)\s*=\s*(\(|function\s*\(|\(.*?\)\s*=>)/);
-  const letMatch = code.match(/\blet\s+([A-Z][A-Za-z0-9_]*)\s*=\s*(\(|function\s*\(|\(.*?\)\s*=>)/);
-  const varMatch = code.match(/\bvar\s+([A-Z][A-Za-z0-9_]*)\s*=\s*(\(|function\s*\(|\(.*?\)\s*=>)/);
+  // Match all PascalCase function/const definitions
+  const matches = [...code.matchAll(/\b(?:function|const|let|var)\s+([A-Z][A-Za-z0-9_]*)\s*(?:=|\()/g)];
+  
+  if (matches.length > 0) {
+    // Grab the very LAST component defined (usually the root component)
+    const lastMatch = matches[matches.length - 1][1];
+    return `${code.trim()}\n\nexport default ${lastMatch};`;
+  }
 
-  const match = functionMatch || constMatch || letMatch || varMatch;
-  if (!match) return '';
-
-  return `${code.trim()}\n\nexport default ${match[1]};`;
+  return code;
 }
 
 export const generateComponentCode = async (userPrompt, history = [], existingCode = '') => {

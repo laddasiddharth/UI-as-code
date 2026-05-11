@@ -9,6 +9,9 @@ export async function exportAsViteProject(code, projectName = 'ui-as-code-export
   const zip = new JSZip();
   const src = zip.folder('src');
 
+  const usesRecharts = code.includes('Chart') || code.includes('recharts');
+  const needsMocks = ['<Card', '<Button', '<Input', '<Badge'].some(tag => code.includes(tag));
+
   // ── package.json ──────────────────────────────────────────────────────────
   zip.file('package.json', JSON.stringify({
     name: projectName,
@@ -24,6 +27,7 @@ export async function exportAsViteProject(code, projectName = 'ui-as-code-export
       react: '^19.0.0',
       'react-dom': '^19.0.0',
       'lucide-react': 'latest',
+      ...(usesRecharts ? { 'recharts': '^2.12.0' } : {}) // Inject Recharts if needed
     },
     devDependencies: {
       '@vitejs/plugin-react': '^4.3.1',
@@ -75,8 +79,27 @@ createRoot(document.getElementById('root')).render(
 );
 `);
 
+  // ── src/components.jsx (Optional Mocks) ───────────────────────────────────
+  if (needsMocks) {
+    src.file('components.jsx', `import React from 'react';
+export const Card = ({ children, className = '', ...props }) => <div className={\`bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden \${className}\`} {...props}>{children}</div>;
+export const CardHeader = ({ children, className = '', ...props }) => <div className={\`px-6 py-4 border-b border-gray-100 \${className}\`} {...props}>{children}</div>;
+export const CardTitle = ({ children, className = '', ...props }) => <h3 className={\`text-lg font-semibold text-gray-900 \${className}\`} {...props}>{children}</h3>;
+export const CardContent = ({ children, className = '', ...props }) => <div className={\`p-6 \${className}\`} {...props}>{children}</div>;
+export const CardFooter = ({ children, className = '', ...props }) => <div className={\`px-6 py-4 border-t border-gray-100 bg-gray-50/50 \${className}\`} {...props}>{children}</div>;
+export const Button = ({ children, className = '', variant = 'primary', ...props }) => <button className={\`px-4 py-2 rounded-lg font-medium bg-blue-600 text-white \${className}\`} {...props}>{children}</button>;
+export const Input = ({ className = '', ...props }) => <input className={\`w-full px-3 py-2 border border-gray-300 rounded-lg \${className}\`} {...props} />;
+export const Badge = ({ children, className = '', ...props }) => <span className={\`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800 \${className}\`} {...props}>{children}</span>;
+`);
+  }
+
   // ── src/App.jsx ── the AI-generated component ─────────────────────────────
-  src.file('App.jsx', code);
+  const mockImport = needsMocks ? `import { Card, CardHeader, CardTitle, CardContent, CardFooter, Button, Input, Badge } from './components';\n` : '';
+  const rechartsImport = usesRecharts && !code.includes("from 'recharts'") 
+    ? `import { ResponsiveContainer, BarChart, LineChart, AreaChart, PieChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar, Line, Area, Pie } from 'recharts';\n` 
+    : '';
+
+  src.file('App.jsx', `${mockImport}${rechartsImport}${code}`);
 
   // ── README.md ─────────────────────────────────────────────────────────────
   zip.file('README.md', `# ${projectName}
