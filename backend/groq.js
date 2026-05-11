@@ -3,22 +3,18 @@ import { SYSTEM_PROMPT, getIterationPrompt } from './prompts.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
-if (!process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY === 'your_openrouter_api_key_here') {
-  console.error('ERROR: OPENROUTER_API_KEY is not set in backend/.env');
+if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'your_groq_api_key_here') {
+  console.error('ERROR: GROQ_API_KEY is not set in backend/.env');
   process.exit(1);
 }
 
-const openai = new OpenAI({
-  baseURL: "https://openrouter.ai/api/v1",
-  apiKey: process.env.OPENROUTER_API_KEY,
-  defaultHeaders: {
-    "HTTP-Referer": "http://localhost:3001",
-    "X-Title": "UI-as-Code Platform",
-  }
+const groq = new OpenAI({
+  baseURL: "https://api.groq.com/openai/v1",
+  apiKey: process.env.GROQ_API_KEY,
 });
 
-const DEFAULT_MODEL = "openrouter/auto";
-const FALLBACK_MODEL = process.env.OPENROUTER_FALLBACK_MODEL;
+const DEFAULT_MODEL = "llama-3.3-70b-versatile";
+const FALLBACK_MODEL = process.env.GROQ_FALLBACK_MODEL || "llama-3.1-8b-instant";
 
 function extractCode(aiResponse) {
   if (!aiResponse || typeof aiResponse !== 'string') return '';
@@ -31,7 +27,6 @@ function extractCode(aiResponse) {
   }
 
   // 2. No backticks? Look for the core React pattern (import + export default)
-  // Prefer index-based slicing to avoid greedy regex capture issues.
   const exportIndex = aiResponse.indexOf('export default');
   if (exportIndex !== -1) {
     const importIndex = aiResponse.indexOf('import ');
@@ -42,7 +37,6 @@ function extractCode(aiResponse) {
   }
 
   // 3. Fallback: Clean up common AI pre-ambles and return the rest
-  // We remove anything before the first 'import' or 'function' if they exist
   let cleaned = aiResponse.trim();
   const firstImport = cleaned.indexOf('import');
   if (firstImport !== -1) {
@@ -86,7 +80,7 @@ export const generateComponentCode = async (userPrompt, history = [], existingCo
     ];
 
     const modelCandidates = [
-      process.env.OPENROUTER_MODEL,
+      process.env.GROQ_MODEL,
       FALLBACK_MODEL,
       DEFAULT_MODEL,
     ].filter(Boolean);
@@ -94,7 +88,7 @@ export const generateComponentCode = async (userPrompt, history = [], existingCo
     let lastError = null;
     for (const model of modelCandidates) {
       try {
-        const completion = await openai.chat.completions.create({
+        const completion = await groq.chat.completions.create({
           model,
           messages: messages,
           temperature: 0.2,
@@ -110,19 +104,15 @@ export const generateComponentCode = async (userPrompt, history = [], existingCo
         }
         return normalized;
       } catch (err) {
-        const shouldFallback =
-          err?.status === 404 ||
-          String(err?.message || '').includes('No endpoints found');
-        if (!shouldFallback) {
-          throw err;
-        }
+        // Groq specific error handling if needed, otherwise fallback
+        console.warn(`Model ${model} failed, trying fallback...`, err.message);
         lastError = err;
       }
     }
 
-    throw lastError || new Error("No available OpenRouter model endpoints found.");
+    throw lastError || new Error("No available Groq model endpoints found.");
   } catch (error) {
-    console.error("Error generating code with OpenRouter:", error);
+    console.error("Error generating code with Groq:", error);
     throw new Error(error?.message || "Failed to generate UI code.");
   }
 };

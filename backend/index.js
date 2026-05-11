@@ -2,12 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
-import { generateComponentCode } from './openrouter.js';
+import { generateComponentCode } from './groq.js';
 import { BAAS_TEMPLATES } from './prompts.js';
 
 dotenv.config();
-if (!process.env.OPENROUTER_API_KEY) {
-  console.error('Error: OPENROUTER_API_KEY is not set in .env. Exiting.');
+if (!process.env.GROQ_API_KEY) {
+  console.error('Error: GROQ_API_KEY is not set in .env. Exiting.');
   process.exit(1);
 }
 
