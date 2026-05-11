@@ -263,7 +263,7 @@ export default function LivePreview({
             const LucideReact = new Proxy({}, {
               get: (_, name) => ({ className, size = 24, strokeWidth = 2, ...rest }) => {
                 const iconData = lucide[name] || lucide['HelpCircle'];
-                const svgChildren = iconData[2].map(([tag, attrs]) =>
+                const svgChildren = (iconData[2] || []).map(([tag, attrs]) =>
                   React.createElement(tag, attrs)
                 );
                 return React.createElement('svg', {
@@ -342,6 +342,19 @@ export default function LivePreview({
                   target.setAttribute('referrerpolicy', 'no-referrer');
                   target.src = 'https://images.weserv.nl/?url=' + encodeURIComponent(normalized);
                 }, true);
+
+                // Thumbnail capture logic inside the iframe
+                const captureThumbnail = () => {
+                  try {
+                    const canvas = document.createElement('canvas');
+                    const root = document.getElementById('root');
+                    if (!root) return;
+                    
+                    // Simple best-effort capture using background color
+                    window.parent.postMessage({ type: 'thumbnail-ready' }, '*');
+                  } catch (e) {}
+                };
+                setTimeout(captureThumbnail, 1500);
               };
 
               run().catch((err) => {
@@ -360,11 +373,40 @@ export default function LivePreview({
       if (event.data.type === 'error') {
         setRuntimeError(event.data.message);
         if (onError) onError(event.data.message);
+      } else if (event.data.type === 'thumbnail-ready' && onThumbnail) {
+        // When iframe says it's ready, we can try to capture it or just use a placeholder
+        // Real implementation of in-iframe capture usually needs a library like dom-to-image
+        // For now, we'll trigger the local capture which is more likely to work if triggered by iframe ready signal
+        triggerCapture();
       }
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [onError]);
+  }, [onError, onThumbnail]);
+
+  const triggerCapture = async () => {
+    const iframeDoc = iframeRef.current?.contentDocument;
+    const root = iframeDoc?.body;
+    if (!root || isGenerating || activeTab !== 'preview') return;
+    
+    const captureKey = `${code}::${theme}`;
+    if (lastCapturedRef.current === captureKey) return;
+
+    try {
+      const canvas = await html2canvas(root, {
+        backgroundColor: theme === 'dark' ? '#0f1117' : '#ffffff',
+        scale: 0.5,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+      });
+      const dataUrl = canvas.toDataURL('image/png', 0.5);
+      lastCapturedRef.current = captureKey;
+      onThumbnail(dataUrl);
+    } catch (err) {
+      console.warn('Thumbnail capture failed:', err.message);
+    }
+  };
 
   useEffect(() => {
     setRuntimeError(null);
@@ -384,33 +426,7 @@ export default function LivePreview({
   }, [iframeRef]);
 
   useEffect(() => {
-    if (!iframeReady || isGenerating || activeTab !== 'preview' || !onThumbnail) return;
-    const captureKey = `${code}::${theme}`;
-    if (!code || lastCapturedRef.current === captureKey) return;
-
-    const capture = async () => {
-      const iframeDoc = iframeRef.current?.contentDocument;
-      const root = iframeDoc?.body;
-      if (!root) return;
-
-      try {
-        const canvas = await html2canvas(root, {
-          backgroundColor: theme === 'dark' ? '#0f1117' : '#ffffff',
-          scale: 0.5,
-          logging: false,
-          useCORS: true,
-        });
-        const dataUrl = canvas.toDataURL('image/png', 0.7);
-        lastCapturedRef.current = captureKey;
-        onThumbnail(dataUrl);
-      } catch (err) {
-        // Thumbnail capture is best-effort; log but don't crash
-        console.warn('Thumbnail capture failed:', err.message);
-      }
-    };
-
-    const raf = requestAnimationFrame(() => capture());
-    return () => cancelAnimationFrame(raf);
+    // Legacy capture loop removed in favor of triggerCapture
   }, [activeTab, code, iframeReady, isGenerating, onThumbnail, theme]);
 
   useEffect(() => {

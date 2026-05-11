@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Settings, User, Sparkles, ChevronDown } from 'lucide-react';
+import { Plus, Settings, User, Sparkles, ChevronDown, MessageSquareCode, FileCode2 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -151,6 +151,20 @@ const Sidebar = ({ isOpen, onClose }) => {
 
           {/* Bottom Section */}
           <div className="pt-2 border-t border-[color:var(--border)] mt-auto flex flex-col gap-1">
+            <button 
+              onClick={() => { navigate('/generations'); onClose(); }}
+              className="flex items-center gap-2 w-full px-2 py-2 rounded-lg hover:bg-[color:var(--panel)] text-[color:var(--ink)] text-sm transition-colors"
+            >
+              <MessageSquareCode className="w-4 h-4 text-[color:var(--muted)]" />
+              Generations
+            </button>
+            <button 
+              onClick={() => { navigate('/components'); onClose(); }}
+              className="flex items-center gap-2 w-full px-2 py-2 rounded-lg hover:bg-[color:var(--panel)] text-[color:var(--ink)] text-sm transition-colors"
+            >
+              <FileCode2 className="w-4 h-4 text-[color:var(--muted)]" />
+              Components
+            </button>
             <button 
               onClick={() => { navigate('/settings'); onClose(); }}
               className="flex items-center gap-2 w-full px-2 py-2 rounded-lg hover:bg-[color:var(--panel)] text-[color:var(--ink)] text-sm transition-colors"

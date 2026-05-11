@@ -48,7 +48,6 @@ export default function ChatPanel({
   messages,
   isGenerating,
   onGenerate,
-  onReset,
   showInput = true,
 }) {
   const [input, setInput] = useState('');
@@ -73,39 +72,13 @@ export default function ChatPanel({
     }
   };
 
-  const suggestions = [
-    "A pricing card with 3 tiers",
-    "A dark hero section with a CTA button",
-    "A responsive navigation bar",
-    "A stats dashboard with charts",
-  ];
+
 
   return (
     <div className="flex flex-col h-full bg-transparent max-w-3xl mx-auto w-full">
 
       <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
-        {messages.length === 0 ? (
-          <div className="space-y-4">
-            <div className="text-center py-6">
-              <div className="w-12 h-12 bg-[color:var(--accent-3)] rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
-                <Sparkles className="w-6 h-6 text-[color:var(--ink)]" />
-              </div>
-              <h3 className="text-sm font-semibold text-[color:var(--ink)] mb-1">Describe your UI</h3>
-            </div>
-            <div className="grid grid-cols-1 gap-2">
-              {suggestions.map((s, i) => (
-                <button
-                  key={i}
-                  onClick={() => onGenerate(s)}
-                  disabled={isGenerating}
-                  className="text-left px-3 py-2.5 text-xs text-[color:var(--muted)] bg-[color:var(--panel)] hover:bg-[color:var(--accent)]/10 hover:text-[color:var(--ink)] border border-[color:var(--border)] rounded-xl transition-all"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
+        {messages.length > 0 && (
           <>
             {messages.map((msg, i) => (
               <MessageBubble key={i} message={msg} />
