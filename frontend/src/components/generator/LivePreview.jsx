@@ -229,7 +229,7 @@ export default function LivePreview({
         const rootElement = document.getElementById('root');
         if (rootElement) {
           const root = ReactDOM.createRoot(rootElement);
-          root.render(React.createElement(RootComponent || (() => <div className="p-8 text-center text-gray-500">No component found to render. Please ensure you export a default component.</div>)));
+          root.render(React.createElement(RootComponent || (() => <div className="p-8 text-center text-gray-500">No component found to render. Please ensure you export a default component.</div>), {}));
         }
       } catch (err) {
         console.error("Render error:", err);
@@ -262,9 +262,19 @@ export default function LivePreview({
             const LucideReact = new Proxy({}, {
               get: (_, name) => ({ className, size = 24, strokeWidth = 2, ...rest }) => {
                 const iconData = lucide[name] || lucide['HelpCircle'];
-                const svgChildren = (iconData[2] || []).map(([tag, attrs]) =>
-                  React.createElement(tag, attrs)
-                );
+                
+                const renderChild = (child) => {
+                  if (!Array.isArray(child)) return null;
+                  const [tag, props, children] = child;
+                  return React.createElement(
+                    tag, 
+                    { ...props, key: Math.random().toString(36).substr(2, 9) }, 
+                    Array.isArray(children) ? children.map(renderChild) : null
+                  );
+                };
+
+                const svgChildren = (iconData[2] || []).map(renderChild);
+                
                 return React.createElement('svg', {
                   xmlns: 'http://www.w3.org/2000/svg',
                   width: size, height: size, viewBox: '0 0 24 24',

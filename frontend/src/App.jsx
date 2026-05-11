@@ -6,7 +6,6 @@ import Login from './pages/Login';
 import GeneratorPage from './pages/generator/GeneratorPage';
 
 import ProjectsPage from './pages/projects/ProjectsPage';
-import GenerationsPage from './pages/generations/GenerationsPage';
 import ComponentsPage from './pages/components/ComponentsPage';
 import SettingsPage from './pages/settings/SettingsPage';
 
@@ -49,14 +48,7 @@ function App() {
                       </DashboardLayout>
                     }
                   />
-                  <Route
-                    path="/generations"
-                    element={
-                      <DashboardLayout>
-                        <GenerationsPage />
-                      </DashboardLayout>
-                    }
-                  />
+
                   <Route
                     path="/components"
                     element={
