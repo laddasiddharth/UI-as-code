@@ -9,6 +9,13 @@ const SESSION_TABLE = 'chat_sessions';
 
 const CURRENT_SESSION_KEY = 'atelierui.currentSessionId';
 
+function createSessionId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `session_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
 const Sidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -50,15 +57,18 @@ const Sidebar = ({ isOpen, onClose }) => {
   }, [user]);
 
   const handleNewChat = () => {
+    localStorage.removeItem(TEMPLATE_PROMPT_KEY);
     localStorage.removeItem(CURRENT_SESSION_KEY);
-    navigate('/?new=1');
+    window.dispatchEvent(new CustomEvent('atelierui:reset-chat'));
+    navigate('/');
     onClose();
   };
 
   const handleTemplateSelect = (prompt) => {
+    const nextSessionId = createSessionId();
     localStorage.setItem(TEMPLATE_PROMPT_KEY, prompt);
-    localStorage.removeItem(CURRENT_SESSION_KEY);
-    navigate('/?new=1');
+    localStorage.setItem(CURRENT_SESSION_KEY, nextSessionId);
+    navigate(`/?session=${nextSessionId}`);
     onClose();
   };
 

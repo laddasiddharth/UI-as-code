@@ -170,8 +170,11 @@ export function useGeneration(externalSessionId = null) {
         setSnapshots([initialSnapshot]);
         setSnapshotIndex(0);
       } else {
-        setSessionId(null);
-        setSessionCreatedAt(null);
+        if (storedId) {
+          localStorage.setItem(CURRENT_SESSION_KEY, storedId);
+        }
+        setSessionId(storedId || null);
+        setSessionCreatedAt(storedId ? new Date().toISOString() : null);
         setCode(DEFAULT_CODE);
         setHistory([]);
         setMessages([]);
@@ -415,6 +418,7 @@ export function useGeneration(externalSessionId = null) {
   const canRedo = snapshotIndex >= 0 && snapshotIndex < snapshots.length - 1;
 
   return {
+    sessionId,
     code,
     setCode,
     messages,

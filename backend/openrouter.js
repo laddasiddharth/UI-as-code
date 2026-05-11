@@ -17,6 +17,9 @@ const openai = new OpenAI({
   }
 });
 
+const DEFAULT_MODEL = "openrouter/auto";
+const FALLBACK_MODEL = process.env.OPENROUTER_FALLBACK_MODEL;
+
 function extractCode(aiResponse) {
   if (!aiResponse || typeof aiResponse !== 'string') return '';
 
@@ -27,12 +30,15 @@ function extractCode(aiResponse) {
     return match[1].trim();
   }
 
-  // 2. No backticks? Look for the core React pattern (imports + export default)
-  // This helps when the AI forgets fences but follows the instructions
-  const fullModuleRegex = /(import[\s\S]*?export\s+default[\s\S]*?)\n?$/m;
-  const moduleMatch = aiResponse.match(fullModuleRegex);
-  if (moduleMatch) {
-    return moduleMatch[1].trim();
+  // 2. No backticks? Look for the core React pattern (import + export default)
+  // Prefer index-based slicing to avoid greedy regex capture issues.
+  const exportIndex = aiResponse.indexOf('export default');
+  if (exportIndex !== -1) {
+    const importIndex = aiResponse.indexOf('import ');
+    const startIndex = importIndex !== -1 && importIndex < exportIndex
+      ? importIndex
+      : exportIndex;
+    return aiResponse.slice(startIndex).trim();
   }
 
   // 3. Fallback: Clean up common AI pre-ambles and return the rest
@@ -51,6 +57,25 @@ function extractCode(aiResponse) {
   return cleaned;
 }
 
+function hasDefaultExport(code) {
+  return /\bexport\s+default\b/.test(code);
+}
+
+function ensureDefaultExport(code) {
+  if (!code) return '';
+  if (hasDefaultExport(code)) return code;
+
+  const functionMatch = code.match(/\bfunction\s+([A-Z][A-Za-z0-9_]*)\s*\(/);
+  const constMatch = code.match(/\bconst\s+([A-Z][A-Za-z0-9_]*)\s*=\s*(\(|function\s*\(|\(.*?\)\s*=>)/);
+  const letMatch = code.match(/\blet\s+([A-Z][A-Za-z0-9_]*)\s*=\s*(\(|function\s*\(|\(.*?\)\s*=>)/);
+  const varMatch = code.match(/\bvar\s+([A-Z][A-Za-z0-9_]*)\s*=\s*(\(|function\s*\(|\(.*?\)\s*=>)/);
+
+  const match = functionMatch || constMatch || letMatch || varMatch;
+  if (!match) return '';
+
+  return `${code.trim()}\n\nexport default ${match[1]};`;
+}
+
 export const generateComponentCode = async (userPrompt, history = [], existingCode = '') => {
   try {
     const finalPrompt = getIterationPrompt(userPrompt, existingCode);
@@ -62,7 +87,8 @@ export const generateComponentCode = async (userPrompt, history = [], existingCo
 
     const modelCandidates = [
       process.env.OPENROUTER_MODEL,
-      "meta-llama/llama-3.3-8b-instruct:free",
+      FALLBACK_MODEL,
+      DEFAULT_MODEL,
     ].filter(Boolean);
 
     let lastError = null;
@@ -74,7 +100,15 @@ export const generateComponentCode = async (userPrompt, history = [], existingCo
           temperature: 0.2,
         });
         const raw = completion.choices[0].message.content;
-        return extractCode(raw);
+        const extracted = extractCode(raw);
+        if (!extracted) {
+          throw new Error('No valid code could be extracted from the model response.');
+        }
+        const normalized = ensureDefaultExport(extracted);
+        if (!normalized) {
+          throw new Error('Generated code is missing an export default and could not be normalized.');
+        }
+        return normalized;
       } catch (err) {
         const shouldFallback =
           err?.status === 404 ||
@@ -89,6 +123,6 @@ export const generateComponentCode = async (userPrompt, history = [], existingCo
     throw lastError || new Error("No available OpenRouter model endpoints found.");
   } catch (error) {
     console.error("Error generating code with OpenRouter:", error);
-    throw new Error("Failed to generate UI code.");
+    throw new Error(error?.message || "Failed to generate UI code.");
   }
 };

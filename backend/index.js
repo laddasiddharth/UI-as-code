@@ -40,7 +40,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     res.status(200).json({ code });
   } catch (error) {
     console.error('Generation Endpoint Error:', error);
-    res.status(500).json({ error: 'Failed to generate code from prompt.' });
+    res.status(500).json({ error: error?.message || 'Failed to generate code from prompt.' });
   }
 });
 

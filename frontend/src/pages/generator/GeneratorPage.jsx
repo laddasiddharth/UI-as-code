@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
 import ChatPanel from '../../components/generator/ChatPanel';
 import LivePreview from '../../components/generator/LivePreview';
 import ExportButton from '../../components/generator/ExportButton';
@@ -19,10 +20,12 @@ export default function GeneratorPage() {
   }
 
   const {
+    sessionId,
     code,
     setCode,
     messages,
     isGenerating,
+    error,
     generate,
     reset,
     repairFromError,
@@ -40,6 +43,7 @@ export default function GeneratorPage() {
   const [previewTheme, setPreviewTheme] = useState('dark');
   const [isStartingTemplate, setIsStartingTemplate] = useState(false);
   const containerRef = React.useRef(null);
+  const isResettingRef = React.useRef(false);
 
 
   const hasMessages = messages.length > 0;
@@ -86,12 +90,36 @@ export default function GeneratorPage() {
   }, [isResizing, resize, stopResizing]);
 
   useEffect(() => {
+    const handleReset = () => {
+      isResettingRef.current = true;
+      flushSync(() => {
+        reset();
+      });
+      flushSync(() => {
+        setSearchParams({}, { replace: true });
+      });
+      setTimeout(() => {
+        isResettingRef.current = false;
+      }, 0);
+    };
+    window.addEventListener('atelierui:reset-chat', handleReset);
+    return () => window.removeEventListener('atelierui:reset-chat', handleReset);
+  }, [reset, setSearchParams]);
+
+  useEffect(() => {
     if (newParam) {
       localStorage.removeItem(CURRENT_SESSION_KEY);
       reset();
       setSearchParams({}, { replace: true });
     }
   }, [newParam, reset, setSearchParams]);
+
+  useEffect(() => {
+    if (!isHydrated || !sessionId) return;
+    if (isResettingRef.current) return;
+    if (sessionParam === sessionId) return;
+    setSearchParams({ session: sessionId }, { replace: true });
+  }, [isHydrated, sessionId, sessionParam, setSearchParams]);
 
   useEffect(() => {
     if (!isHydrated || isGenerating) return;
@@ -140,6 +168,11 @@ export default function GeneratorPage() {
         className={`flex flex-col h-full ${!isResizing ? 'transition-[width,opacity] duration-300 ease-in-out' : ''} ${showPreview && chatVisible ? 'border-r border-[color:var(--border)]' : 'w-full'} ${!chatVisible && showPreview ? 'hidden lg:flex lg:w-0 lg:border-none' : ''}`}
         style={{ width: showPreview && chatVisible ? `${chatWidth}%` : undefined }}
       >
+        {error && (
+          <div className="mx-4 mt-4 rounded-2xl border border-[color:var(--accent)]/30 bg-[color:var(--accent)]/10 px-4 py-3 text-sm text-[color:var(--accent)]">
+            <span className="font-semibold">Generation error:</span> {error}
+          </div>
+        )}
         
         {!hasMessages ? (
           /* Empty State */
