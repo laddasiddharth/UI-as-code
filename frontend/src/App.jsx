@@ -5,7 +5,7 @@ import DashboardLayout from './components/layout/DashboardLayout';
 import Login from './pages/Login';
 import GeneratorPage from './pages/generator/GeneratorPage';
 
-import ProjectsPage from './pages/projects/ProjectsPage';
+
 import ComponentsPage from './pages/components/ComponentsPage';
 import SettingsPage from './pages/settings/SettingsPage';
 
@@ -40,14 +40,7 @@ function App() {
                     }
                   />
 
-                  <Route
-                    path="/projects"
-                    element={
-                      <DashboardLayout>
-                        <ProjectsPage />
-                      </DashboardLayout>
-                    }
-                  />
+
 
                   <Route
                     path="/components"

@@ -5,7 +5,7 @@ import LivePreview from '../../components/generator/LivePreview';
 import ExportButton from '../../components/generator/ExportButton';
 import { useGeneration } from '../../hooks/useGeneration';
 import { useSearchParams } from 'react-router-dom';
-import { Sparkles, Loader2, Send } from 'lucide-react';
+import { Loader2, Send } from 'lucide-react';
 import { TEMPLATE_PROMPT_KEY } from '../../lib/templatePrompts';
 
 const CURRENT_SESSION_KEY = 'atelierui.currentSessionId';
@@ -231,7 +231,6 @@ export default function GeneratorPage() {
               messages={messages}
               isGenerating={isGenerating}
               onGenerate={generate}
-              onReset={reset}
               showInput={true}
             />
           </div>

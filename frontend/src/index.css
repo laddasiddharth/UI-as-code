@@ -40,24 +40,6 @@ body {
 	letter-spacing: 0.01em;
 }
 
-.app-shell {
-	position: relative;
-	background: var(--bg);
-	min-height: 100svh;
-	overflow: clip;
-}
-
-.app-shell::before,
-.app-shell::after {
-	display: none;
-}
-
-.content-surface {
-	position: relative;
-	z-index: 1;
-	min-height: 0; /* allow flex children to shrink and fill correctly */
-}
-
 .glass-panel {
 	background: rgba(27, 32, 44, 0.72);
 	border: 1px solid rgba(255, 255, 255, 0.08);
@@ -69,13 +51,6 @@ body {
 	background: var(--panel-strong);
 	border: 1px solid var(--border);
 	box-shadow: var(--shadow-soft);
-}
-
-.floating-card {
-	background: rgba(21, 24, 33, 0.8);
-	border: 1px solid rgba(255, 255, 255, 0.08);
-	box-shadow: var(--glow);
-	backdrop-filter: blur(18px);
 }
 
 .page-shell {
@@ -93,23 +68,3 @@ body {
 	line-height: 1.1;
 }
 
-.generator-shell {
-	display: flex;
-	flex-direction: column;
-	min-height: calc(100svh - 4rem);
-}
-
-.generator-chat {
-	width: 100%;
-}
-
-@media (orientation: landscape) and (max-width: 1024px) {
-	.generator-shell {
-		flex-direction: row;
-	}
-
-	.generator-chat {
-		width: 320px;
-		flex-shrink: 0;
-	}
-}
