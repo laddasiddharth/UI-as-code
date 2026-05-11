@@ -368,22 +368,6 @@ export default function LivePreview({
     `;
   }, [processedCode, theme]);
 
-  useEffect(() => {
-    const handleMessage = (event) => {
-      if (event.data.type === 'error') {
-        setRuntimeError(event.data.message);
-        if (onError) onError(event.data.message);
-      } else if (event.data.type === 'thumbnail-ready' && onThumbnail) {
-        // When iframe says it's ready, we can try to capture it or just use a placeholder
-        // Real implementation of in-iframe capture usually needs a library like dom-to-image
-        // For now, we'll trigger the local capture which is more likely to work if triggered by iframe ready signal
-        triggerCapture();
-      }
-    };
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [onError, onThumbnail]);
-
   const triggerCapture = async () => {
     const iframeDoc = iframeRef.current?.contentDocument;
     const root = iframeDoc?.body;
@@ -409,6 +393,22 @@ export default function LivePreview({
   };
 
   useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data.type === 'error') {
+        setRuntimeError(event.data.message);
+        if (onError) onError(event.data.message);
+      } else if (event.data.type === 'thumbnail-ready' && onThumbnail) {
+        // When iframe says it's ready, we can try to capture it or just use a placeholder
+        // Real implementation of in-iframe capture usually needs a library like dom-to-image
+        // For now, we'll trigger the local capture which is more likely to work if triggered by iframe ready signal
+        triggerCapture();
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [onError, onThumbnail]);
+
+  useEffect(() => {
     setRuntimeError(null);
   }, [localCode]);
 
@@ -425,9 +425,7 @@ export default function LivePreview({
     return () => iframe.removeEventListener('load', handleLoad);
   }, [iframeRef]);
 
-  useEffect(() => {
-    // Legacy capture loop removed in favor of triggerCapture
-  }, [activeTab, code, iframeReady, isGenerating, onThumbnail, theme]);
+
 
   useEffect(() => {
     window.__PREVIEW_REACT__ = { React, ReactDOM: ReactDOMClient };

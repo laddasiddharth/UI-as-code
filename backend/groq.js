@@ -92,6 +92,8 @@ export const generateComponentCode = async (userPrompt, history = [], existingCo
           model,
           messages: messages,
           temperature: 0.2,
+        }, {
+          signal: AbortSignal.timeout(28000),
         });
         const raw = completion.choices[0].message.content;
         const extracted = extractCode(raw);
