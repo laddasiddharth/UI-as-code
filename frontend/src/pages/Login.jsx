@@ -60,7 +60,7 @@ export default function Login() {
           <h2 className="mt-2 font-display text-2xl sm:text-3xl text-[color:var(--ink)]">
             {isSignUp ? 'Create an account' : 'Welcome back'}
           </h2>
-          <p className="mt-2 text-sm text-[color:var(--muted)]">
+          <p className="mt-2 text-sm-fluid text-[color:var(--muted)]">
             {isSignUp ? 'Start building interfaces with code.' : 'Sign in to access your workspaces.'}
           </p>
         </div>
@@ -92,7 +92,7 @@ export default function Login() {
           </div>
 
           {error && (
-            <div className="bg-[color:var(--accent)]/10 text-[color:var(--accent)] p-3 rounded-lg text-sm border border-[color:var(--accent)]/30">
+            <div className="bg-[color:var(--accent)]/10 text-[color:var(--accent)] p-3 rounded-lg text-sm-fluid border border-[color:var(--accent)]/30">
               {error}
             </div>
           )}
@@ -115,7 +115,7 @@ export default function Login() {
         <div className="text-center mt-4">
           <button
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-sm text-[color:var(--muted)] hover:text-[color:var(--ink)] transition-colors"
+            className="text-sm-fluid text-[color:var(--muted)] hover:text-[color:var(--ink)] transition-colors"
           >
             {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
           </button>

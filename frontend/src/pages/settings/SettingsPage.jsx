@@ -7,7 +7,7 @@ export default function SettingsPage() {
       <header className="page-header">
         <p className="text-xs uppercase tracking-[0.3em] text-[color:var(--muted)]">Account</p>
         <h1 className="font-display text-3xl sm:text-4xl text-[color:var(--ink)]">Settings</h1>
-        <p className="text-sm text-[color:var(--muted)]">
+        <p className="text-sm-fluid text-[color:var(--muted)]">
           Manage your preferences and account settings here.
         </p>
       </header>
@@ -16,7 +16,7 @@ export default function SettingsPage() {
         <div className="w-12 h-12 rounded-2xl bg-[color:var(--accent-3)]/25 text-[color:var(--ink)] flex items-center justify-center">
           <Settings className="w-6 h-6" />
         </div>
-        <div className="text-sm text-[color:var(--muted)]">
+        <div className="text-sm-fluid text-[color:var(--muted)]">
           Settings controls are coming next.
         </div>
       </div>

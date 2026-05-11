@@ -21,7 +21,7 @@ function MessageBubble({ message }) {
         {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
       </div>
       <div className={`min-w-0 flex-1 space-y-2 ${isUser ? 'items-end' : 'items-start'} flex flex-col`}>
-        <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words whitespace-pre-wrap w-full ${
+        <div className={`px-4 py-2.5 rounded-2xl text-xs-fluid leading-relaxed break-words whitespace-pre-wrap w-full ${
           message.isError
             ? 'bg-[color:var(--accent)]/10 text-[color:var(--accent)] border border-[color:var(--accent)]/30'
             : isUser
@@ -33,7 +33,7 @@ function MessageBubble({ message }) {
         {message.code && !isUser && (
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1.5 text-xs text-[color:var(--muted)] hover:text-[color:var(--ink)] transition-colors"
+            className="flex items-center gap-1.5 text-xs-fluid text-[color:var(--muted)] hover:text-[color:var(--ink)] transition-colors"
           >
             {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
             {copied ? 'Copied!' : 'Copy code'}
@@ -75,9 +75,9 @@ export default function ChatPanel({
 
 
   return (
-    <div className="flex flex-col h-full bg-transparent max-w-3xl mx-auto w-full">
+    <div className="flex flex-col h-full min-h-0 bg-transparent max-w-3xl mx-auto w-full">
 
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-4">
         {messages.length > 0 && (
           <>
             {messages.map((msg, i) => (
@@ -90,7 +90,7 @@ export default function ChatPanel({
                 </div>
                 <div className="bg-[color:var(--panel)] border border-[color:var(--border)] shadow-sm px-4 py-2.5 rounded-2xl rounded-tl-sm flex items-center gap-2">
                   <Loader2 className="w-3.5 h-3.5 text-[color:var(--accent)] animate-spin" />
-                  <span className="text-xs text-[color:var(--muted)]">Generating component...</span>
+                  <span className="text-xs-fluid text-[color:var(--muted)]">Generating component...</span>
                 </div>
               </div>
             )}
@@ -100,7 +100,7 @@ export default function ChatPanel({
       </div>
 
       {showInput && (
-        <div className="p-4 bg-transparent flex-shrink-0 w-full max-w-3xl mx-auto relative mb-4">
+        <div className="p-3 sm:p-4 bg-transparent flex-shrink-0 w-full max-w-3xl mx-auto relative mb-3 sm:mb-4">
           <form onSubmit={handleSubmit} className="relative bg-[color:var(--panel-strong)] border border-[color:var(--border)] rounded-2xl p-2 shadow-sm focus-within:ring-1 focus-within:ring-[color:var(--muted)]">
             <textarea
               ref={textareaRef}

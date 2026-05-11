@@ -434,8 +434,8 @@ export default function LivePreview({
   }, []);
 
   return (
-    <div className="absolute inset-0 flex flex-col bg-[color:var(--panel-strong)] overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2 bg-[color:var(--panel-strong)] border-b border-[color:var(--border)] flex-shrink-0">
+    <div className="absolute inset-0 flex flex-col min-h-0 bg-[color:var(--panel-strong)] overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-[color:var(--panel-strong)] border-b border-[color:var(--border)] flex-shrink-0">
         <div className="flex items-center gap-2 sm:gap-3">
           {showChatToggle && (
             <button
@@ -525,7 +525,7 @@ export default function LivePreview({
         </div>
       </div>
 
-      <div className="flex-1 relative bg-white overflow-hidden">
+      <div className="flex-1 min-h-0 relative bg-white overflow-hidden">
         {isGenerating && (
           <div className="absolute inset-0 z-20 bg-[color:var(--panel-strong)]/80 backdrop-blur-sm flex items-center justify-center">
             <div className="bg-[color:var(--panel-strong)] border border-[color:var(--border)] rounded-2xl p-6 text-center shadow-2xl">
@@ -557,7 +557,7 @@ export default function LivePreview({
               value={localCode}
               onChange={(e) => setLocalCode(e.target.value)}
               spellCheck="false"
-              className="flex-1 w-full bg-transparent text-gray-300 font-mono text-sm p-6 focus:outline-none resize-none leading-relaxed selection:bg-purple-500/30"
+              className="flex-1 w-full bg-transparent text-gray-300 font-mono text-sm p-4 sm:p-6 focus:outline-none resize-none leading-relaxed selection:bg-purple-500/30"
               placeholder="Paste your code here..."
             />
           </div>

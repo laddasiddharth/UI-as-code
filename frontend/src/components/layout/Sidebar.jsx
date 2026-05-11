@@ -84,7 +84,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       
       {/* Sidebar container */}
       <aside 
-        className={`fixed lg:static inset-y-0 left-0 w-[260px] bg-[color:var(--panel-strong)] z-30 transform transition-transform duration-300 ease-in-out flex flex-col h-full ${
+        className={`fixed lg:static inset-y-0 left-0 w-[260px] sm:w-[280px] bg-[color:var(--panel-strong)] z-30 transform transition-transform duration-300 ease-in-out flex flex-col h-[100dvh] lg:h-full ${
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
@@ -92,7 +92,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           {/* Top Section */}
           <button 
             onClick={handleNewChat}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[color:var(--panel)] text-[color:var(--ink)] transition-colors w-full text-sm font-medium"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[color:var(--panel)] text-[color:var(--ink)] transition-colors w-full text-sm-fluid font-medium"
           >
             <div className="flex items-center justify-center w-7 h-7 rounded-full bg-[color:var(--ink)] text-[color:var(--bg)]">
               <Plus className="w-4 h-4" />
@@ -105,7 +105,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             <div className="mb-4">
               <button
                 onClick={() => setTemplatesOpen((prev) => !prev)}
-                className="w-full flex items-center justify-between px-2 mb-2 text-xs font-medium text-[color:var(--muted)] hover:text-[color:var(--ink)]"
+                className="w-full flex items-center justify-between px-2 mb-2 text-xs-fluid font-medium text-[color:var(--muted)] hover:text-[color:var(--ink)]"
               >
                 <span>Templates</span>
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${templatesOpen ? 'rotate-180' : ''}`} />
@@ -116,7 +116,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                     <button
                       key={template.title}
                       onClick={() => handleTemplateSelect(template.prompt)}
-                      className="flex items-center gap-2 w-full px-2 py-2 rounded-lg text-xs transition-colors text-left text-[color:var(--muted)] hover:bg-[color:var(--panel)] hover:text-[color:var(--ink)]"
+                      className="flex items-center gap-2 w-full px-2 py-2 rounded-lg text-xs-fluid transition-colors text-left text-[color:var(--muted)] hover:bg-[color:var(--panel)] hover:text-[color:var(--ink)]"
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                       <span className="truncate">{template.title}</span>
@@ -126,7 +126,7 @@ const Sidebar = ({ isOpen, onClose }) => {
               )}
             </div>
 
-            <div className="text-xs font-medium text-[color:var(--muted)] mb-2 px-2">Recent Chats</div>
+            <div className="text-xs-fluid font-medium text-[color:var(--muted)] mb-2 px-2">Recent Chats</div>
             
             {sessions.map(session => (
               <button 
@@ -136,7 +136,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                   navigate(`/?session=${session.id}`); 
                   onClose(); 
                 }}
-                className={`flex items-center gap-2 w-full px-2 py-2 rounded-lg text-sm transition-colors text-left truncate ${
+                className={`flex items-center gap-2 w-full px-2 py-2 rounded-lg text-sm-fluid transition-colors text-left truncate ${
                   new URLSearchParams(location.search).get('session') === session.id
                     ? 'bg-[color:var(--panel)] text-[color:var(--ink)]'
                     : 'text-[color:var(--muted)] hover:bg-[color:var(--panel)] hover:text-[color:var(--ink)]'
@@ -154,19 +154,19 @@ const Sidebar = ({ isOpen, onClose }) => {
 
             <button 
               onClick={() => { navigate('/components'); onClose(); }}
-              className="flex items-center gap-2 w-full px-2 py-2 rounded-lg hover:bg-[color:var(--panel)] text-[color:var(--ink)] text-sm transition-colors"
+              className="flex items-center gap-2 w-full px-2 py-2 rounded-lg hover:bg-[color:var(--panel)] text-[color:var(--ink)] text-sm-fluid transition-colors"
             >
               <FileCode2 className="w-4 h-4 text-[color:var(--muted)]" />
               Components
             </button>
             <button 
               onClick={() => { navigate('/settings'); onClose(); }}
-              className="flex items-center gap-2 w-full px-2 py-2 rounded-lg hover:bg-[color:var(--panel)] text-[color:var(--ink)] text-sm transition-colors"
+              className="flex items-center gap-2 w-full px-2 py-2 rounded-lg hover:bg-[color:var(--panel)] text-[color:var(--ink)] text-sm-fluid transition-colors"
             >
               <Settings className="w-4 h-4 text-[color:var(--muted)]" />
               Settings
             </button>
-            <div className="flex items-center gap-2 w-full px-2 py-2 rounded-lg hover:bg-[color:var(--panel)] text-[color:var(--ink)] text-sm transition-colors cursor-pointer">
+            <div className="flex items-center gap-2 w-full px-2 py-2 rounded-lg hover:bg-[color:var(--panel)] text-[color:var(--ink)] text-sm-fluid transition-colors cursor-pointer">
               <div className="w-7 h-7 rounded-full bg-[color:var(--panel)] flex items-center justify-center flex-shrink-0">
                 <User className="w-4 h-4 text-[color:var(--muted)]" />
               </div>

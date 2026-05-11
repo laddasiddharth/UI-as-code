@@ -37,6 +37,8 @@ export default function GeneratorPage() {
     updateThumbnail,
   } = useGeneration(sessionParam);
   const [chatVisible, setChatVisible] = useState(true);
+  const [mobileTab, setMobileTab] = useState('chat');
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [quickInput, setQuickInput] = useState('');
   const [chatWidth, setChatWidth] = useState(40); // percentage
   const [isResizing, setIsResizing] = useState(false);
@@ -48,6 +50,23 @@ export default function GeneratorPage() {
 
   const hasMessages = messages.length > 0;
   const showPreview = hasMessages && (code || isGenerating);
+
+  const getChatWidthForViewport = React.useCallback(() => {
+    if (typeof window === 'undefined') return 40;
+    const width = window.innerWidth;
+    if (width < 640) return 100;
+    if (width < 1024) return 48;
+    if (width < 1280) return 42;
+    return 38;
+  }, []);
+
+  const getResizeBounds = React.useCallback(() => {
+    if (typeof window === 'undefined') return { min: 20, max: 80 };
+    const width = window.innerWidth;
+    if (width < 1024) return { min: 35, max: 65 };
+    if (width < 1280) return { min: 30, max: 70 };
+    return { min: 25, max: 75 };
+  }, []);
 
   const startResizing = React.useCallback((e) => {
     e.preventDefault();
@@ -63,11 +82,30 @@ export default function GeneratorPage() {
       const containerRect = containerRef.current.getBoundingClientRect();
       const relativeX = e.clientX - containerRect.left;
       const newWidth = (relativeX / containerRect.width) * 100;
-      if (newWidth > 20 && newWidth < 80) {
+      const bounds = getResizeBounds();
+      if (newWidth > bounds.min && newWidth < bounds.max) {
         setChatWidth(newWidth);
       }
     }
-  }, [isResizing]);
+  }, [getResizeBounds, isResizing]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 1023px)');
+    const updateScreen = () => setIsSmallScreen(mediaQuery.matches);
+    updateScreen();
+    mediaQuery.addEventListener('change', updateScreen);
+    return () => mediaQuery.removeEventListener('change', updateScreen);
+  }, []);
+
+  useEffect(() => {
+    const updateWidth = () => {
+      if (isResizing) return;
+      setChatWidth(getChatWidthForViewport());
+    };
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, [getChatWidthForViewport, isResizing]);
 
   useEffect(() => {
     if (isResizing) {
@@ -136,9 +174,15 @@ export default function GeneratorPage() {
     }
   }, [isGenerating, messages.length]);
 
+  useEffect(() => {
+    if (!showPreview) {
+      setMobileTab('chat');
+    }
+  }, [showPreview]);
+
   if (!isHydrated) {
     return (
-      <div className="flex h-full w-full items-center justify-center text-sm text-[color:var(--muted)]">
+      <div className="flex h-full w-full items-center justify-center text-sm-fluid text-[color:var(--muted)]">
         Loading your session...
       </div>
     );
@@ -161,11 +205,35 @@ export default function GeneratorPage() {
   return (
     <div 
       ref={containerRef}
-      className={`flex h-full w-full bg-[color:var(--bg)] relative overflow-hidden ${isResizing ? 'select-none' : ''}`}
+      className={`flex flex-col lg:flex-row h-full w-full bg-[color:var(--bg)] relative overflow-hidden ${isResizing ? 'select-none' : ''}`}
     >
+      {showPreview && (
+          <div className="lg:hidden flex items-center justify-center gap-2 pb-3 pt-[max(env(safe-area-inset-top),0.5rem)] pl-[max(env(safe-area-inset-left),1rem)] pr-[max(env(safe-area-inset-right),1rem)] sticky top-0 z-20 bg-[color:var(--bg)]/90 border-b border-[color:var(--border)] backdrop-blur-md">
+          <button
+            onClick={() => setMobileTab('chat')}
+            className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+              mobileTab === 'chat'
+                ? 'bg-[color:var(--ink)] text-[color:var(--bg)] border-transparent'
+                : 'text-[color:var(--muted)] border-[color:var(--border)]'
+            }`}
+          >
+            Chat
+          </button>
+          <button
+            onClick={() => setMobileTab('preview')}
+            className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+              mobileTab === 'preview'
+                ? 'bg-[color:var(--ink)] text-[color:var(--bg)] border-transparent'
+                : 'text-[color:var(--muted)] border-[color:var(--border)]'
+            }`}
+          >
+            Preview
+          </button>
+        </div>
+      )}
       {/* Main Chat Area */}
       <div 
-        className={`flex flex-col h-full ${!isResizing ? 'transition-[width,opacity] duration-300 ease-in-out' : ''} ${showPreview && chatVisible ? 'border-r border-[color:var(--border)]' : 'w-full'} ${!chatVisible && showPreview ? 'hidden lg:flex lg:w-0 lg:border-none' : ''}`}
+        className={`flex flex-col flex-1 lg:flex-none min-h-0 w-full ${!isResizing ? 'transition-[width,opacity] duration-300 ease-in-out' : ''} ${showPreview && chatVisible ? 'border-b lg:border-b-0 lg:border-r border-[color:var(--border)]' : 'w-full'} ${!chatVisible && showPreview ? 'hidden lg:flex lg:w-0 lg:border-none' : ''} ${showPreview && mobileTab === 'preview' ? 'hidden lg:flex' : ''}`}
         style={{ width: showPreview && chatVisible ? `${chatWidth}%` : undefined }}
       >
         {error && (
@@ -176,17 +244,17 @@ export default function GeneratorPage() {
         
         {!hasMessages ? (
           /* Empty State */
-          <div className="flex-1 flex flex-col items-center justify-center p-4">
+          <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6">
             {isStartingTemplate ? (
               <div className="flex flex-col items-center gap-3 text-center">
                 <div className="w-12 h-12 bg-[color:var(--accent)]/15 rounded-full flex items-center justify-center">
                   <Loader2 className="w-6 h-6 text-[color:var(--accent)] animate-spin" />
                 </div>
-                <p className="text-sm text-[color:var(--muted)]">Starting template...</p>
+                <p className="text-sm-fluid text-[color:var(--muted)]">Starting template...</p>
               </div>
             ) : (
               <>
-                <h1 className="text-3xl font-semibold text-[color:var(--ink)] mb-8">What are you working on?</h1>
+                <h1 className="text-2xl sm:text-3xl font-semibold text-[color:var(--ink)] mb-6 sm:mb-8 text-center">What are you working on?</h1>
                 
                 <div className="w-full max-w-2xl relative">
                   <form onSubmit={handleQuickSubmit} className="relative bg-[color:var(--panel)] border border-[color:var(--border)] rounded-2xl p-2 shadow-sm focus-within:ring-1 focus-within:ring-[color:var(--muted)]">
@@ -209,12 +277,12 @@ export default function GeneratorPage() {
                       </button>
                     </div>
                   </form>
-                  <div className="mt-6 flex flex-wrap justify-center gap-2">
+                  <div className="mt-5 sm:mt-6 flex flex-wrap justify-center gap-2">
                     {["A pricing card", "A responsive navigation bar", "A dark hero section", "A stats dashboard"].map((suggestion) => (
                       <button
                         key={suggestion}
                         onClick={() => generate(suggestion)}
-                        className="px-4 py-2 text-sm text-[color:var(--muted)] border border-[color:var(--border)] rounded-full hover:bg-[color:var(--panel)] hover:text-[color:var(--ink)] transition-colors"
+                        className="px-4 py-2 text-sm-fluid text-[color:var(--muted)] border border-[color:var(--border)] rounded-full hover:bg-[color:var(--panel)] hover:text-[color:var(--ink)] transition-colors"
                       >
                         {suggestion}
                       </button>
@@ -226,7 +294,7 @@ export default function GeneratorPage() {
           </div>
         ) : (
           /* Active Chat State */
-          <div className="flex-1 overflow-hidden relative">
+          <div className="flex-1 min-h-0 overflow-hidden relative">
             <ChatPanel
               messages={messages}
               isGenerating={isGenerating}
@@ -255,7 +323,7 @@ export default function GeneratorPage() {
 
       {/* Preview Area (Canvas) */}
       <div 
-        className={`h-full ${!isResizing ? 'transition-[width,opacity] duration-300 ease-in-out' : ''} bg-[#0f1117] relative ${showPreview ? (chatVisible ? 'hidden lg:block' : 'w-full') : 'w-0 hidden'}`}
+        className={`flex-1 lg:flex-none h-full min-h-0 w-full ${!isResizing ? 'transition-[width,opacity] duration-300 ease-in-out' : ''} bg-[#0f1117] relative ${showPreview ? 'block' : 'hidden'} ${showPreview && mobileTab === 'chat' ? 'hidden lg:block' : ''}`}
         style={{ width: showPreview && chatVisible ? `${100 - chatWidth}%` : undefined }}
       >
         {isResizing && (
@@ -268,7 +336,7 @@ export default function GeneratorPage() {
             onError={(errorMessage) => repairFromError(errorMessage, code)}
             onChatToggle={() => setChatVisible(!chatVisible)}
             chatVisible={chatVisible}
-            showChatToggle={true}
+            showChatToggle={!isSmallScreen}
             onCodeChange={setCode}
             theme={previewTheme}
             onThemeChange={setPreviewTheme}
