@@ -40,7 +40,7 @@ export default function GeneratorPage() {
   const [quickInput, setQuickInput] = useState('');
   const [chatWidth, setChatWidth] = useState(40); // percentage
   const [isResizing, setIsResizing] = useState(false);
-  const [previewTheme, setPreviewTheme] = useState('dark');
+  const [previewTheme, setPreviewTheme] = useState('light');
   const [isStartingTemplate, setIsStartingTemplate] = useState(false);
   const containerRef = React.useRef(null);
   const isResettingRef = React.useRef(false);

@@ -162,7 +162,7 @@ const Sidebar = ({ isOpen, onClose }) => {
               <div className="w-7 h-7 rounded-full bg-[color:var(--panel)] flex items-center justify-center flex-shrink-0">
                 <User className="w-4 h-4 text-[color:var(--muted)]" />
               </div>
-              <span className="truncate font-medium">User Account</span>
+              <span className="truncate font-medium">{user?.email || 'User Account'}</span>
             </div>
           </div>
         </div>

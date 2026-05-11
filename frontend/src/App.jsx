@@ -9,7 +9,6 @@ import ProjectsPage from './pages/projects/ProjectsPage';
 import GenerationsPage from './pages/generations/GenerationsPage';
 import ComponentsPage from './pages/components/ComponentsPage';
 import SettingsPage from './pages/settings/SettingsPage';
-import { PlusCircle, Code, Layout, TerminalSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const ProtectedRoute = ({ children }) => {

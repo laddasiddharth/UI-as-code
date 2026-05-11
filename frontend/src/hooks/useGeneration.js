@@ -82,11 +82,11 @@ export function useGeneration(externalSessionId = null) {
       code: nextCode,
       history: nextHistory,
       messages: nextMessages,
+      thumbnail: nextThumbnail ?? null,
     };
 
     const payloadVariants = [
-      ['id', 'user_id', 'updated_at', 'title', 'code', 'history', 'messages'],
-      ['id', 'user_id', 'updated_at', 'title', 'code', 'history', 'messages'],
+      ['id', 'user_id', 'updated_at', 'title', 'code', 'history', 'messages', 'thumbnail'],
       ['id', 'user_id', 'updated_at', 'title', 'code', 'history'],
       ['id', 'user_id', 'updated_at', 'title', 'code', 'messages'],
       ['id', 'user_id', 'updated_at', 'title', 'code'],
@@ -116,9 +116,6 @@ export function useGeneration(externalSessionId = null) {
     }
 
     console.error('Failed to sync session: schema is missing expected columns.');
-    return;
-
-    localStorage.setItem(CURRENT_SESSION_KEY, nextSessionId);
   }, [user]);
 
   useEffect(() => {
@@ -363,13 +360,19 @@ export function useGeneration(externalSessionId = null) {
     setError(null);
     setLastAutoFixKey(autoFixKey);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     try {
       const fixPrompt = buildFixPrompt(errorMessage, previousCode);
       const response = await fetch(`${API_URL}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: fixPrompt, history, existingCode: previousCode }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) throw new Error('Auto-fix failed.');
 
@@ -388,7 +391,10 @@ export function useGeneration(externalSessionId = null) {
         nextThumbnail: snapshots[snapshotIndex]?.thumbnail ?? null,
       });
     } catch (err) {
-      setError(err.message);
+      const errorMsg = err.name === 'AbortError'
+        ? 'Auto-fix timed out.'
+        : err.message;
+      setError(errorMsg);
     } finally {
       setAutoFixCount(prev => prev + 1);
       setIsGenerating(false);

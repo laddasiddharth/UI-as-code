@@ -258,20 +258,24 @@ export default function LivePreview({
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <script src="https://cdn.tailwindcss.com"></script>
           <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+          <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
           <script>
-            window.Lucide = { createIcons: () => {} };
-            const LucideProxy = new Proxy({}, {
-              get: (target, name) => {
-                return (props) => {
-                  const size = props.size || props.height || 24;
-                  return React.createElement('svg', {
-                    width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
-                    strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', className: props.className, ...props
-                  }, React.createElement('circle', { cx: 12, cy: 12, r: 10 }));
-                }
+            const LucideReact = new Proxy({}, {
+              get: (_, name) => ({ className, size = 24, strokeWidth = 2, ...rest }) => {
+                const iconData = lucide[name] || lucide['HelpCircle'];
+                const svgChildren = iconData[2].map(([tag, attrs]) =>
+                  React.createElement(tag, attrs)
+                );
+                return React.createElement('svg', {
+                  xmlns: 'http://www.w3.org/2000/svg',
+                  width: size, height: size, viewBox: '0 0 24 24',
+                  fill: 'none', stroke: 'currentColor',
+                  strokeWidth, strokeLinecap: 'round', strokeLinejoin: 'round',
+                  className, ...rest
+                }, ...svgChildren);
               }
             });
-            window.LucideReact = LucideProxy;
+            window.LucideReact = LucideReact;
           </script>
           <style>
             body { margin: 0; padding: 0; background: ${theme === 'dark' ? '#0f1117' : '#fff'}; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -400,7 +404,8 @@ export default function LivePreview({
         lastCapturedRef.current = captureKey;
         onThumbnail(dataUrl);
       } catch (err) {
-        console.warn('Thumbnail capture failed:', err);
+        // Thumbnail capture is best-effort; log but don't crash
+        console.warn('Thumbnail capture failed:', err.message);
       }
     };
 

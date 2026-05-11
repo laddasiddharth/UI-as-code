@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, RotateCcw, Sparkles, User, Bot, Copy, Check } from 'lucide-react';
+import { Send, Loader2, Sparkles, User, Bot, Copy, Check } from 'lucide-react';
 
 function MessageBubble({ message }) {
   const [copied, setCopied] = useState(false);
