@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import * as ReactDOMClient from 'react-dom/client';
-import html2canvas from 'html2canvas';
 import { Eye, Code2, Loader2, AlertTriangle, RefreshCw, Copy, Check, PanelLeftClose, PanelLeftOpen, Sun, Moon, Undo2, Redo2 } from 'lucide-react';
 
 export default function LivePreview({
@@ -344,15 +343,17 @@ export default function LivePreview({
                 }, true);
 
                 // Thumbnail capture logic inside the iframe
-                const captureThumbnail = () => {
+                const captureThumbnail = async () => {
                   try {
-                    const canvas = document.createElement('canvas');
+                    const { default: domToImage } = await import('https://esm.sh/dom-to-image-more@3');
                     const root = document.getElementById('root');
                     if (!root) return;
                     
-                    // Simple best-effort capture using background color
-                    window.parent.postMessage({ type: 'thumbnail-ready' }, '*');
-                  } catch (e) {}
+                    const dataUrl = await domToImage.toPng(root, { quality: 0.6, scale: 0.5 });
+                    window.parent.postMessage({ type: 'thumbnail', dataUrl }, '*');
+                  } catch (e) {
+                    // Best-effort, silently ignore
+                  }
                 };
                 setTimeout(captureThumbnail, 1500);
               };
@@ -368,40 +369,14 @@ export default function LivePreview({
     `;
   }, [processedCode, theme]);
 
-  const triggerCapture = async () => {
-    const iframeDoc = iframeRef.current?.contentDocument;
-    const root = iframeDoc?.body;
-    if (!root || isGenerating || activeTab !== 'preview') return;
-    
-    const captureKey = `${code}::${theme}`;
-    if (lastCapturedRef.current === captureKey) return;
-
-    try {
-      const canvas = await html2canvas(root, {
-        backgroundColor: theme === 'dark' ? '#0f1117' : '#ffffff',
-        scale: 0.5,
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-      });
-      const dataUrl = canvas.toDataURL('image/png', 0.5);
-      lastCapturedRef.current = captureKey;
-      onThumbnail(dataUrl);
-    } catch (err) {
-      console.warn('Thumbnail capture failed:', err.message);
-    }
-  };
-
   useEffect(() => {
     const handleMessage = (event) => {
       if (event.data.type === 'error') {
         setRuntimeError(event.data.message);
         if (onError) onError(event.data.message);
-      } else if (event.data.type === 'thumbnail-ready' && onThumbnail) {
-        // When iframe says it's ready, we can try to capture it or just use a placeholder
-        // Real implementation of in-iframe capture usually needs a library like dom-to-image
-        // For now, we'll trigger the local capture which is more likely to work if triggered by iframe ready signal
-        triggerCapture();
+      } else if (event.data.type === 'thumbnail' && onThumbnail) {
+        // Thumbnail comes FROM the iframe, no cross-origin issue
+        onThumbnail(event.data.dataUrl);
       }
     };
     window.addEventListener('message', handleMessage);
