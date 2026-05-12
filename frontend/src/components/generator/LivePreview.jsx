@@ -353,19 +353,15 @@ export default function LivePreview({
                 }, true);
 
                 // Thumbnail capture logic inside the iframe
-                const captureThumbnail = async () => {
+                setTimeout(async () => {
                   try {
                     const { default: domToImage } = await import('https://esm.sh/dom-to-image-more@3');
                     const root = document.getElementById('root');
                     if (!root) return;
-                    
-                    const dataUrl = await domToImage.toPng(root, { quality: 0.6, scale: 0.5 });
+                    const dataUrl = await domToImage.toPng(root, { scale: 0.5 });
                     window.parent.postMessage({ type: 'thumbnail', dataUrl }, '*');
-                  } catch (e) {
-                    // Best-effort, silently ignore
-                  }
-                };
-                setTimeout(captureThumbnail, 1500);
+                  } catch (e) {}
+                }, 1500);
               };
 
               run().catch((err) => {
