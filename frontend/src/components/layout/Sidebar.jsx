@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Settings, User, Sparkles, ChevronDown, FileCode2 } from 'lucide-react';
+import { Plus, Settings, User, Sparkles, ChevronDown, FileCode2, MoreHorizontal, Edit2, Trash2, Check, X } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -22,6 +22,9 @@ const Sidebar = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [activeMenuId, setActiveMenuId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
 
   React.useEffect(() => {
     if (!user) {
@@ -60,7 +63,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     localStorage.removeItem(TEMPLATE_PROMPT_KEY);
     localStorage.removeItem(CURRENT_SESSION_KEY);
     window.dispatchEvent(new CustomEvent('atelierui:reset-chat'));
-    navigate('/');
+    // Force navigation to root without any query params
+    navigate({ pathname: '/', search: '' }, { replace: true });
     onClose();
   };
 
@@ -70,6 +74,64 @@ const Sidebar = ({ isOpen, onClose }) => {
     localStorage.setItem(CURRENT_SESSION_KEY, nextSessionId);
     navigate(`/?session=${nextSessionId}`);
     onClose();
+  };
+
+  const handleDelete = async (e, sessionId) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to permanently delete this chat?')) return;
+    
+    try {
+      const { error } = await supabase
+        .from(SESSION_TABLE)
+        .delete()
+        .eq('id', sessionId);
+      
+      if (error) throw error;
+      
+      // Update local state instantly
+      setSessions(prev => prev.filter(s => s.id !== sessionId));
+      
+      // If deleting current session, reset and clear URL
+      if (new URLSearchParams(location.search).get('session') === sessionId) {
+        localStorage.removeItem(CURRENT_SESSION_KEY);
+        window.dispatchEvent(new CustomEvent('atelierui:reset-chat'));
+        navigate({ pathname: '/', search: '' }, { replace: true });
+      }
+      
+      setActiveMenuId(null);
+    } catch (err) {
+      console.error('Delete failed:', err);
+    }
+  };
+
+  const startRename = (e, session) => {
+    e.stopPropagation();
+    setEditingId(session.id);
+    setEditTitle(session.title || 'Untitled chat');
+    setActiveMenuId(null);
+  };
+
+  const handleRename = async (e) => {
+    e.preventDefault();
+    if (!editTitle.trim() || !editingId) return;
+    
+    try {
+      const { error } = await supabase
+        .from(SESSION_TABLE)
+        .update({ title: editTitle.trim() })
+        .eq('id', editingId);
+      
+      if (error) throw error;
+
+      // Update local state instantly
+      setSessions(prev => prev.map(s => 
+        s.id === editingId ? { ...s, title: editTitle.trim() } : s
+      ));
+      
+      setEditingId(null);
+    } catch (err) {
+      console.error('Rename failed:', err);
+    }
   };
 
   return (
@@ -135,22 +197,79 @@ const Sidebar = ({ isOpen, onClose }) => {
             
             <div className="space-y-1">
               {sessions.map(session => (
-                <button 
-                  key={session.id}
-                  onClick={() => { 
-                    localStorage.setItem(CURRENT_SESSION_KEY, session.id);
-                    navigate(`/?session=${session.id}`); 
-                    onClose(); 
-                  }}
-                  className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-sm transition-all text-left truncate group ${
-                    new URLSearchParams(location.search).get('session') === session.id
-                      ? 'bg-[color:var(--panel)] text-[color:var(--ink)] shadow-sm'
-                      : 'text-[color:var(--muted)] hover:bg-[color:var(--panel)]/50 hover:text-[color:var(--ink)]'
-                  }`}
-                >
-                  <FileCode2 className={`w-4 h-4 shrink-0 transition-colors ${new URLSearchParams(location.search).get('session') === session.id ? 'text-[color:var(--accent)]' : 'text-[color:var(--muted)] group-hover:text-[color:var(--ink)]'}`} />
-                  <span className="truncate">{session.title || 'Untitled chat'}</span>
-                </button>
+                <div key={session.id} className="relative group/item">
+                  {editingId === session.id ? (
+                    <form onSubmit={handleRename} className="flex items-center gap-1 px-2 py-1 bg-[color:var(--panel)] rounded-xl border border-[color:var(--accent)]/30 mx-1">
+                      <input
+                        autoFocus
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        className="flex-1 bg-transparent text-sm text-[color:var(--ink)] outline-none px-1 py-1"
+                        onBlur={() => setEditingId(null)}
+                      />
+                      <button type="submit" className="p-1 text-green-500 hover:bg-green-500/10 rounded">
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button type="button" onClick={() => setEditingId(null)} className="p-1 text-red-500 hover:bg-red-500/10 rounded">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </form>
+                  ) : (
+                    <div className="relative">
+                      <button 
+                        onClick={() => { 
+                          localStorage.setItem(CURRENT_SESSION_KEY, session.id);
+                          navigate(`/?session=${session.id}`); 
+                          onClose(); 
+                        }}
+                        className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-sm transition-all text-left truncate group ${
+                          new URLSearchParams(location.search).get('session') === session.id
+                            ? 'bg-[color:var(--panel)] text-[color:var(--ink)] shadow-sm'
+                            : 'text-[color:var(--muted)] hover:bg-[color:var(--panel)]/50 hover:text-[color:var(--ink)]'
+                        }`}
+                      >
+                        <FileCode2 className={`w-4 h-4 shrink-0 transition-colors ${new URLSearchParams(location.search).get('session') === session.id ? 'text-[color:var(--accent)]' : 'text-[color:var(--muted)] group-hover:text-[color:var(--ink)]'}`} />
+                        <span className="truncate pr-6">{session.title || 'Untitled chat'}</span>
+                      </button>
+                      
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenuId(activeMenuId === session.id ? null : session.id);
+                        }}
+                        className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-all z-10 ${
+                          activeMenuId === session.id 
+                            ? 'opacity-100 bg-[color:var(--bg)] text-[color:var(--ink)]' 
+                            : 'opacity-0 group-hover/item:opacity-100 text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg)]'
+                        }`}
+                      >
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+
+                      {activeMenuId === session.id && (
+                        <>
+                          <div className="fixed inset-0 z-20" onClick={() => setActiveMenuId(null)} />
+                          <div className="absolute right-0 top-full mt-1 w-36 bg-[color:var(--panel-strong)] border border-[color:var(--border)] rounded-xl shadow-2xl z-30 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                            <button
+                              onClick={(e) => startRename(e, session)}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-[color:var(--ink)] hover:bg-[color:var(--panel)] transition-colors"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                              Rename
+                            </button>
+                            <button
+                              onClick={(e) => handleDelete(e, session.id)}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Delete
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -178,7 +297,6 @@ const Sidebar = ({ isOpen, onClose }) => {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-[color:var(--ink)] truncate">{user?.email?.split('@')[0] || 'User'}</p>
-                <p className="text-[10px] text-[color:var(--muted)] truncate uppercase tracking-tighter">Pro Account</p>
               </div>
             </div>
           </div>

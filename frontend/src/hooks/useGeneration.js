@@ -133,6 +133,15 @@ export function useGeneration(externalSessionId = null) {
     }
 
     let isMounted = true;
+    
+    // Reset hydration state and clear current data to show loading/prevent stale views
+    setIsHydrated(false);
+    setCode(DEFAULT_CODE);
+    setMessages([]);
+    setHistory([]);
+    setSnapshots([]);
+    setSnapshotIndex(-1);
+
     const load = async () => {
       const { data, error: fetchError } = await supabase
         .from(SESSION_TABLE)
