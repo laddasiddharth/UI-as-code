@@ -75,57 +75,59 @@ export default function ChatPanel({
 
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-transparent max-w-3xl mx-auto w-full">
-
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-4">
+    <div className="flex flex-col h-full min-h-0 bg-transparent w-full">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 scrollbar-thin">
         {messages.length > 0 && (
-          <>
+          <div className="max-w-3xl mx-auto w-full space-y-6">
             {messages.map((msg, i) => (
               <MessageBubble key={i} message={msg} />
             ))}
             {isGenerating && (
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[color:var(--accent)]/15">
-                  <Bot className="w-4 h-4 text-[color:var(--accent)]" />
+              <div className="flex gap-4 animate-in fade-in duration-300">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center bg-[color:var(--accent)]/15 shrink-0 shadow-sm">
+                  <Bot className="w-5 h-5 text-[color:var(--accent)] animate-pulse" />
                 </div>
-                <div className="bg-[color:var(--panel)] border border-[color:var(--border)] shadow-sm px-4 py-2.5 rounded-2xl rounded-tl-sm flex items-center gap-2">
-                  <Loader2 className="w-3.5 h-3.5 text-[color:var(--accent)] animate-spin" />
-                  <span className="text-xs-fluid text-[color:var(--muted)]">Generating component...</span>
+                <div className="bg-[color:var(--panel-strong)] border border-[color:var(--border)] shadow-xl px-5 py-3 rounded-2xl rounded-tl-sm flex items-center gap-3">
+                  <Loader2 className="w-4 h-4 text-[color:var(--accent)] animate-spin" />
+                  <span className="text-sm font-medium text-[color:var(--muted)]">Generating component...</span>
                 </div>
               </div>
             )}
-            <div ref={messagesEndRef} />
-          </>
+            <div ref={messagesEndRef} className="h-4" />
+          </div>
         )}
       </div>
 
       {showInput && (
-        <div className="p-3 sm:p-4 bg-transparent flex-shrink-0 w-full max-w-3xl mx-auto relative mb-3 sm:mb-4">
-          <form onSubmit={handleSubmit} className="relative bg-[color:var(--panel-strong)] border border-[color:var(--border)] rounded-2xl p-2 shadow-sm focus-within:ring-1 focus-within:ring-[color:var(--muted)]">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Message..."
-              rows={1}
-              className="w-full bg-transparent text-[color:var(--ink)] placeholder-[color:var(--muted)] resize-none outline-none min-h-[44px] max-h-[200px] py-2.5 px-3 overflow-y-auto"
-              disabled={isGenerating}
-            />
-            <div className="absolute right-2 bottom-2">
-              <button
-                type="submit"
-                disabled={!input.trim() || isGenerating}
-                className="p-1.5 bg-[color:var(--ink)] text-[color:var(--bg)] hover:opacity-90 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                {isGenerating ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-          </form>
+        <div className="flex-shrink-0 w-full p-4 sm:p-6 lg:p-8 bg-gradient-to-t from-[color:var(--bg)] via-[color:var(--bg)]/90 to-transparent">
+          <div className="max-w-3xl mx-auto w-full relative">
+            <form onSubmit={handleSubmit} className="relative bg-[color:var(--panel-strong)] border border-[color:var(--border)] rounded-2xl p-2 shadow-2xl focus-within:ring-2 focus-within:ring-[color:var(--accent)]/20 transition-all">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="How should I improve it?"
+                rows={1}
+                className="w-full bg-transparent text-[color:var(--ink)] placeholder-[color:var(--muted)] resize-none outline-none min-h-[48px] max-h-[200px] py-3 px-4 text-base"
+                disabled={isGenerating}
+              />
+              <div className="absolute right-2 bottom-2">
+                <button
+                  type="submit"
+                  disabled={!input.trim() || isGenerating}
+                  className="p-2 bg-[color:var(--ink)] text-[color:var(--bg)] hover:opacity-90 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
+                >
+                  {isGenerating ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Send className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+            </form>
+            <p className="mt-3 text-center text-[10px] text-[color:var(--muted)] uppercase tracking-widest opacity-50">Atelier AI can make mistakes. Verify important info.</p>
+          </div>
         </div>
       )}
     </div>
